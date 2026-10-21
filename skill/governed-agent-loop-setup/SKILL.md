@@ -89,6 +89,14 @@ Also collect the unnumbered values: `{{PROJECT_NAME}}`, `{{PM_IDENTITY}}`
 `{{CLOUD_WATCHDOG_STALE_HOURS}}` (8). Defaults in parentheses are the reference
 values and are fine for a first loop.
 
+For the status plane (GAL-D17), also collect: `{{SP:9:REGISTRY_FILE}}` (the
+project's structured registry that seeds `plan.json`, or none),
+`{{THROUGHPUT_WINDOW_START}}` (the date the capacity model last changed; the
+first dispatch if unknown), `{{LAST_DEPLOY_COMMIT}}` (the last recorded deploy on
+main), `{{STATUS_TASK_NAME}}` and, after the first hand publish of the page,
+`{{STATUS_ARTIFACT_URL}}`. The page is published once by hand with a seed snapshot
+before the status task exists, so the task has a URL to republish.
+
 ## Step 2: parameterize
 
 Copy from the kit into the target repo, resolving every `{{...}}` token above
