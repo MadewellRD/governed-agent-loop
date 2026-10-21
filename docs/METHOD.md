@@ -74,7 +74,7 @@ The governed thing is whatever your product does. In the reference implementatio
 it is itself a governed-action runtime with its own invariants about approvals,
 evidence and tenant isolation. Those invariants are what the packets must respect
 and what the review checks first. They are not the loop's invariants; the loop has
-its own, which are the ten rules.
+its own, which are the eleven rules.
 
 The confusion to avoid is letting a product invariant leak into the loop's
 protocol or vice versa. The loop protocol should be portable across products. The

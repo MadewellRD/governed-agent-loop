@@ -298,6 +298,70 @@ Reasoning:   With destructive verbs denied, uncommitted work has no recovery pat
 
 ---
 
+### GAL-D13: Instruction files are attended-only write surface
+Date:        2026-10-21
+Decider:     Operator (reference: LOOP-13 ruling, attended session 2026-10-21)
+Origin:      An unattended tick attempting an owed amendment to the protocol file
+             was refused three times by the substrate's permission classifier as
+             "Instruction Poisoning", including a write of the replacement
+             paragraph to a scratch file outside the repository with no edit
+             performed. The trigger was the content, imperative protocol prose
+             destined for a later agent, not the mechanism.
+Question:    Who may edit the files that govern later unattended runs, and when?
+Options:     (a) Treat the refusal as a substrate defect and route around it.
+             (b) Make the protocol file, the agent ground-rules file and the
+                 harness settings attended-only: edited by the supervisor only in
+                 a session with the operator present, on a branch that merges
+                 under the gate; an unattended run parks an owed amendment and
+                 never attempts it.
+             (c) Move protocol amendments into the stored prompt instead.
+Disposition: (b).
+Reasoning:   An unattended agent rewriting the instruction file that governs later
+             unattended agents is the exact shape the guard exists to stop, and
+             every protocol amendment the reference loop had landed before this
+             ruling would be refused today. (a) builds on the assumption that the
+             guard will keep failing open. (c) violates GAL-D07. (b) costs one
+             attended session per amendment and makes the authorship of every
+             protocol change a human-present event by construction. Descriptive
+             writes (cursor, decision queue, receipts, state files) are unaffected
+             and remain unattended write surface.
+
+---
+
+### GAL-D14: An agent runs in the foreground; a result event never substitutes for a terminal record
+Date:        2026-10-21
+Decider:     Operator (reference: LOOP-11 riders (e) and (f), attended session
+             2026-10-21, after the LOOP-11 correction)
+Origin:      A finished agent emitted its result event, then stayed resident for
+             fifteen minutes waiting on a background task it had spawned for its
+             gate run, answered a stale wakeup with a second result event, and only
+             then exited. The supervisor's first diagnosis blamed the job daemon and
+             recommended accepting the agent's own result event as a terminal
+             signal; the correction showed the daemon was right and the process was
+             genuinely alive.
+Question:    How does the loop prevent an agent from outliving its own completion
+             report, and what does the harvest do when it sees a result event
+             before a terminal record?
+Options:     (a) Accept the result event as terminal for harvest purposes.
+             (b) Shorten the dispatch timeout.
+             (c) Fix job reaping in the daemon.
+             (d) Accept the exposure.
+             (e) The dispatch prompt forbids background tasks, monitors and
+                 scheduled wakeups, so the final result and process exit coincide.
+             (f) Step 3 states that a result event with a non-terminal record means
+                 wait, never harvest.
+Disposition: (e) and (f). (a) withdrawn: it would have had the supervisor tear
+             down a worktree with a live agent inside it. (b) rejected: trades a
+             liveness bug for a correctness bug. (c) not applicable to this
+             incident. (d) rejected.
+Reasoning:   GAL-D09 held: terminal status only was the rule that kept the
+             supervisor from racing a live process. The cost was one tick, not the
+             hours the first diagnosis projected. (e) removes the cause; (f) closes
+             the door the withdrawn (a) would have opened, so that no later
+             supervisor rediscovers it as a shortcut.
+
+---
+
 ## Adopting this ledger
 
 Copy this file to `docs/DECISIONS.md` in the target repository. Keep the format

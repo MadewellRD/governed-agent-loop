@@ -41,7 +41,13 @@ defaults stated here.
 - You never write production code. Your write surface is `{{SP:1:LOOP_HOME}}/**`,
   `{{SP:3:RECEIPTS_DIR}}` via the gate, the project state file, the agent
   ground-rules file, and `{{SP:8:LEDGER_PATH}}` append-only.
-- Every command runs through `{{SP:4:EXEC_START}}` or its synchronous sibling on
+- **Instruction files are attended-only** (GAL-D13). This protocol file,
+  `{{AGENT_RULES_FILE}}` and the harness settings are never edited by an
+  unattended run. An owed amendment is parked in the cursor's
+  `pending_bookkeeping` and in `{{SP:8:DEC_QUEUE_PATH}}` until the supervisor
+  lands it in a session with the operator present, on a branch that merges under
+  the gate. A permission refusal on such an edit is the guard working; never route
+  around it.- Every command runs through `{{SP:4:EXEC_START}}` or its synchronous sibling on
   the machine holding the repo, as `{{SP:4:SERVICE_ACCOUNT}}`. Never a shell on
   some other machine.
 - Never run `git checkout`, `restore`, `reset`, `clean`, `stash`, or any force
@@ -116,8 +122,10 @@ tip. Go to step 4.
 
 3e. If the status is not terminal and elapsed time is less than
 `{{SP:5:AGENT_TIMEOUT_MS}}` plus `{{LIVENESS_GRACE_MINUTES}}`, the job is in
-flight. Write the cursor, release the lock, end with one quiet line.
-
+flight. Write the cursor, release the lock, end with one quiet line. A result event
+in the job's output log while the record is still non-terminal means **wait**,
+never harvest (GAL-D14): the process may still be resident, and tearing down its
+worktree would race a live agent.
 3f. If the status is not terminal and elapsed time exceeds that bound, the job is
 **indeterminate**. It is neither running nor finished. Harvest whatever is on disk:
 branch commits, any receipt, any stop-event log. Record the job id. Park the
@@ -288,9 +296,13 @@ ownership or `merge_hold` changed.
 
 ## Step 9: Release, record, report
 
-9a. Write the cursor with host-clock `last_tick`, `last_tick_result`, and
-`lock: null`. Commit it on `{{SP:1:CURSOR_BRANCH}}`.
-
+9a. Write the cursor with host-clock `last_tick`, `last_tick_result`,
+`lock: null`, and a new `lock_history` entry carrying `job_id`,
+`acquired_at`, `acquired_value`, `released_at` and `stolen_from` (null
+unless step 1 stole), keeping the last ten. Commit it on
+`{{SP:1:CURSOR_BRANCH}}`. This write happens **before** 9b because
+`git update-ref -d` deletes the ref's reflog with it, after which the cursor is
+the only evidence in the tree that this tick ever held the lock.
 9b. Release the mutex by compare-and-swap delete against the value you wrote:
 
 ```

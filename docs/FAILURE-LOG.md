@@ -1,6 +1,6 @@
 # Failure log
 
-The ten rules in `README.md` were not designed. They were extracted from a week of
+The eleven rules in `README.md` were not designed. They were extracted from a week of
 running the reference implementation and writing down what broke. This file is the
 evidence. Every entry has a date, what was observed, the root cause, and the rule
 or decision it produced. Hashes are the reference repository's and are included so
@@ -258,6 +258,115 @@ contradiction between them is a halt condition rather than a precedence rule.
 
 ---
 
+### LOOP-10. A guard with no true negative, 2026-10-21
+
+**Observed.** The protocol's bus-split guard said: if the loop branch carries
+anything beyond the cursor, that is a violation. Run honestly it fired every tick,
+because 26 commits of pre-split history on that branch touched twelve paths. A tick
+either parked the same historical finding every hour or silently reinterpreted the
+sentence. The tick parked it and asked.
+
+**Root cause.** The guard was written against the intended end state, not the
+branch's actual history, so it could never return a negative.
+
+**Produced.** The guard keys on a watermark: a violation is a commit on the loop
+branch *after* a named commit that touches any path other than the cursor,
+checked mechanically with `git log --name-only <watermark>..<loop-branch>` and
+a path exclusion. First true negative on the next tick, every tick since. The
+operator rejected rewriting the branch to match the rule as written, because the
+cursor's whole audit trail lives in that reflog. A guard that cannot say "no" is
+noise that trains the loop to ignore a real guard.
+
+---
+
+### LOOP-11. The supervisor misdiagnosed a live process as a stale record, 2026-10-21
+
+**Observed.** A packet's agent emitted its result event at 04:20Z. The supervisor's
+04:24Z tick found the job record non-terminal and exited quietly, correctly. It
+then parked a finding that the job daemon had stopped updating the record and
+recommended amending the harvest to accept the agent's own result event as a
+terminal signal, projecting three and a half hours of idle ticks.
+
+**What actually happened.** The agent had launched its gate as a background task.
+After its first result it stayed resident, received a stale wakeup from that task at
+04:35Z, answered it with a second result event, and exited. The record's
+last-updated time equalled start because the daemon records state changes and the
+state had not changed: the process was alive. The record went terminal at
+04:35:09Z, and the next tick harvested normally. Cost: one tick.
+
+**Root cause.** A headless agent that spawns background work can outlive its own
+completion report. The supervisor read "no update since start" as "daemon dead"
+when it meant "nothing changed".
+
+**Produced.** A correction entry appended beside the original (never overwriting
+it), withdrawing the recommendation, and GAL-D14: the dispatch prompt forbids
+background tasks, monitors and scheduled wakeups, and the harvest step states that
+a result event with a non-terminal record means wait. The proposed shortcut would
+have had the supervisor tear down a worktree with a live agent inside it. Rule 5
+held; the correction is the evidence that it should.
+
+---
+
+### LOOP-12. A foreground sleep wedged the device bridge, 2026-10-21
+
+**Observed.** Pacing between gate polls, a tick issued a synchronous
+`Start-Sleep -Seconds 420` with a generous job timeout. The bridge's own reply
+budget is sixty seconds and independent of the job timeout. The call timed out,
+and the next two read-only calls also timed out while the sleeping job held the
+execution slot. About four minutes and three calls lost; nothing mutated.
+
+**Root cause.** The job timeout governs the job. The bridge budget governs the
+call. They are different numbers and the second is the binding one for anything
+synchronous.
+
+**Produced.** Pace in-session, never with a foreground command longer than the
+bridge budget. Already a substrate gotcha below; this is the incident that
+measured it.
+
+---
+
+### LOOP-13. The classifier refuses unattended edits to the protocol file, 2026-10-21
+
+**Observed.** A tick attempting an owed, operator-directed amendment to the
+protocol file was refused three times by the substrate's permission classifier,
+reason "Instruction Poisoning". The third attempt wrote the replacement paragraph
+to a scratch file outside the repository and performed no edit; it was refused
+too. In the same tick, descriptive writes to the cursor and the decision queue
+succeeded.
+
+**Root cause.** The trigger is the content: imperative protocol prose that a later
+unattended agent will read and follow. Every protocol amendment the loop had
+landed before this would be refused today.
+
+**Produced.** Rule 11 and GAL-D13. The protocol file, the agent ground-rules file
+and the harness settings are attended-only write surface. The first amendment
+under the rule, carrying the LOOP-11 riders and the lock-history record, was made
+by the supervisor in an attended session on a carriage branch and merged under the
+gate by the next unattended tick, which is allowed to gate and merge it, just not
+to write it.
+
+---
+
+### DEFECT-5. A ratified outcome was unreachable inside the packet scope, 2026-10-21
+
+**Observed.** A packet to make a policy evaluation transactional halted in 41
+seconds with no code change: the repository trait had no transactional method, the
+trait crate was out of scope, and the packet named out-of-scope as a halt. The agent
+also corrected a field path the prior audit had got wrong and confirmed that no
+migration was needed.
+
+**Root cause.** The supervisor drew the packet scope from the audit's description
+of the code rather than from the trait definition, and the ratification said "one
+bounded packet", so the supervisor could not re-shape it on its own authority.
+
+**Produced.** A good halt, accepted as a successful outcome. The operator split the
+work: the half reachable today dispatches now; the half needing the trait change
+gets the trait crate in scope and queues behind it. The supervisor's rule is that
+it may narrow a packet it wrote (GAL-D06) but never widen one; widening is a
+ruling.
+
+---
+
 ## Receipt binding: three consecutive packets
 
 The single most repeated finding, and the one that justifies rule 3 on its own.
@@ -378,3 +487,4 @@ Not rules, but every one of these cost a tick.
 | 8. Criteria covered by grant | DEFECT-4 |
 | 9. Nothing waits on a human | D17, the DEC queue, every parked item |
 | 10. Model matches blast radius | LOOP-3, the digest cadence incident |
+| 11. Instruction files are attended-only | LOOP-13, and LOOP-9 for why the prompt is not the alternative |

@@ -62,9 +62,10 @@ One string. Resolve the placeholders.
 > You are a coding agent for {{PROJECT_NAME}}. Read
 > `{{SP:1:LOOP_HOME}}/packets/PKT-{{NNN}}.md` in this working directory and
 > execute it exactly; it is your complete task specification. Read
-> `{{AGENT_RULES_FILE}}` first for ground rules.
->
-> Commit every green micro-step as you go. A previous agent run on this loop
+> `{{AGENT_RULES_FILE}}` first for ground rules. Run every command in the
+> foreground: never launch a background task, a monitor, or a scheduled wakeup,
+> so that your final result and your process exit coincide.
+>> Commit every green micro-step as you go. A previous agent run on this loop
 > died before it could report, and its commits were the only evidence that
 > survived. Work that is not committed does not exist.
 >

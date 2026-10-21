@@ -71,8 +71,14 @@ POLLING ANYWHERE IN THE TICK. A non-terminal record past {{SP:5:AGENT_TIMEOUT_MS
 plus {{LIVENESS_GRACE_MINUTES}} minutes is INDETERMINATE, not running: harvest
 what is on disk, record the job id, park it, and do not dispatch a second agent
 against the same packet until a terminal status appears or the operator resolves
-it.
+it. A result event in the job's output log with a NON-TERMINAL record means WAIT,
+never harvest (GAL-D14).
 
+INSTRUCTION FILES ARE ATTENDED-ONLY (GAL-D13). You never edit the protocol file,
+{{AGENT_RULES_FILE}} or the harness settings in an unattended run. Park an owed
+amendment in the cursor's pending_bookkeeping and in {{SP:8:DEC_QUEUE_PATH}}; the
+supervisor lands it only in a session with the operator present. A permission
+refusal on such an edit is the guard working. Do not route around it.
 DISPATCH. Headless agents launch through {{SP:4:EXEC_START}} with program
 {{SP:5:AGENT_BIN}} and credential {{SP:5:AGENT_CREDENTIAL}}, a reference the
 runtime resolves, never a value. Use a streaming output format so a killed agent

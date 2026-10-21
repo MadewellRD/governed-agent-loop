@@ -30,7 +30,7 @@ missing in ways that are invisible until you look:
 
 Every one of those is a real incident from the reference implementation, not a
 hypothetical. They are documented with dates and commit hashes in
-[`docs/FAILURE-LOG.md`](docs/FAILURE-LOG.md). The ten rules below exist because
+[`docs/FAILURE-LOG.md`](docs/FAILURE-LOG.md). The eleven rules below exist because
 each of them cost something.
 
 ---
@@ -88,7 +88,7 @@ the audit trail cannot be the source of a ruling.
 
 ---
 
-## The ten rules
+## The eleven rules
 
 These are the whole method. Everything in `protocol/` is an implementation of
 them.
@@ -141,8 +141,15 @@ their own cadence, in a window built for it.
 give it judgment. The watchdog compares a timestamp, so give it the floor. Run
 count is the wrong axis; consequence is the right one.
 
----
+**11. Instruction files are attended-only write surface.** The protocol file, the
+agent ground-rules file and the harness settings govern every later unattended
+run. An unattended run never edits them. Amendments are made by the supervisor in
+a session with the operator present, on a branch that merges under the gate. The
+reference substrate's permission classifier refuses such edits unattended; that
+refusal is the guard working, and the rule exists so that nothing is built on the
+assumption it will not.
 
+---
 ## What is in the box
 
 | Path | What it is |

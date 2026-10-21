@@ -47,6 +47,22 @@
       }
     },
 
+    "lock_history": {
+      "description": "Last ten lock acquisitions, written at step 9a BEFORE the ref is deleted, because deleting the ref deletes its reflog and this becomes the only in-tree evidence of ownership (GAL-D13 era amendment; see FAILURE-LOG LOOP-13 and the step 9 note).",
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["job_id", "acquired_at", "acquired_value", "released_at", "stolen_from"],
+        "properties": {
+          "job_id": { "type": "string" },
+          "acquired_at": { "$ref": "#/$defs/timestamp" },
+          "acquired_value": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "released_at": { "$ref": "#/$defs/timestamp" },
+          "stolen_from": { "oneOf": [ { "type": "null" }, { "type": "string", "pattern": "^[0-9a-f]{40}$" } ] }
+        }
+      }
+    },
     "lock": {
       "description": "Advisory mirror of the real mutex (the refs/pm/tick-lock git ref). Written by the holder at step 1 and nulled at step 9. The git ref is authoritative; this field exists so a re-read can detect ownership change without a git call.",
       "oneOf": [

@@ -11,8 +11,8 @@ agent's delivered commit, reviews it at the delivered tip against a gate
 receipt bound to that tip, merges or rejects, and dispatches exactly one new
 packet; a daily decision digest; and two watchdogs. The kit you are
 parameterizing lives in the `governed-agent-loop` repository. Read its
-`README.md` (the ten rules) and `SWAP-POINTS.md` before asking anything. The
-ten rules are not configurable. If a substrate makes one impossible, stop and
+`README.md` (the eleven rules) and `SWAP-POINTS.md` before asking anything. The
+eleven rules are not configurable. If a substrate makes one impossible, stop and
 report that; do not drop the rule.
 
 Hard constraints on you during setup:

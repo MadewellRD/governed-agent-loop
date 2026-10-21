@@ -6,7 +6,7 @@ runtime, scheduled by Claude scheduled tasks. None of those four choices is load
 bearing. This file is the list of what you change, what the reference uses, and
 what breaks if you get it wrong.
 
-Read `README.md` first for the ten rules. Those are **not** swap points. They are
+Read `README.md` first for the eleven rules. Those are **not** swap points. They are
 the method. If a substrate makes one of them impossible, that is a finding about
 the substrate, not permission to drop the rule.
 
@@ -221,7 +221,7 @@ implying coverage you do not have, and stop the regress there on purpose.
 
 ## Things that are not swap points
 
-- The ten rules in `README.md`.
+- The eleven rules in `README.md`.
 - The binding rule. You may change which directory is excluded. You may not stop
   binding, and you may not widen the exclusion for convenience.
 - Independent re-gating of the delivered tip. The agent's receipt is a claim.
