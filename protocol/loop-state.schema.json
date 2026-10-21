@@ -48,7 +48,7 @@
     },
 
     "lock_history": {
-      "description": "Last ten lock acquisitions, written at step 9a BEFORE the ref is deleted, because deleting the ref deletes its reflog and this becomes the only in-tree evidence of ownership (GAL-D13 era amendment; see FAILURE-LOG LOOP-13 and the step 9 note).",
+      "description": "Last ten lock acquisitions. The entry is written at step 1c immediately after acquisition with released_at null, so the cursor always names the current holder (GAL-D16); step 9a fills released_at BEFORE the ref is deleted, because deleting the ref deletes its reflog and the cursor is then the only in-tree evidence of ownership.",
       "type": "array",
       "maxItems": 10,
       "items": {
@@ -58,7 +58,7 @@
           "job_id": { "type": "string" },
           "acquired_at": { "$ref": "#/$defs/timestamp" },
           "acquired_value": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-          "released_at": { "$ref": "#/$defs/timestamp" },
+          "released_at": { "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/timestamp" } ], "description": "Null while the lock is held." },
           "stolen_from": { "oneOf": [ { "type": "null" }, { "type": "string", "pattern": "^[0-9a-f]{40}$" } ] }
         }
       }

@@ -121,8 +121,9 @@ which is neither running nor finished and must not be treated as either.
 **6. A lock must be a lock.** An advisory flag in a file the other writer rewrites
 is not a mutex. Use compare-and-swap against non-existence. Separately, re-read the
 shared state as the last operation before any mutating step and abort if ownership
-or a hold changed. The irreversible step gets this check unconditionally.
-
+or a hold changed. The irreversible step gets this check unconditionally. Write the
+holder into the shared state the moment the lock is taken, not when it is released:
+a record that only exists after release cannot show who holds the lock now.
 **7. Rulings originate in the ledger.** A decision is ratified when it lands in the
 gated decision record. A prompt may restate a ruling; it may never originate one.
 The reference implementation recorded a ratification citing a prompt that had been
@@ -147,8 +148,9 @@ run. An unattended run never edits them. Amendments are made by the supervisor i
 a session with the operator present, on a branch that merges under the gate. The
 reference substrate's permission classifier refuses such edits unattended; that
 refusal is the guard working, and the rule exists so that nothing is built on the
-assumption it will not.
-
+assumption it will not. The rule is about content, not paths: a disposition or a
+"next run does X" paragraph is an instruction wherever it lands, so the decision
+queue is append-only intake and closure lives only in the ledger.
 ---
 ## What is in the box
 

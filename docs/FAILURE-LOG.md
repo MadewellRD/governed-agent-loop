@@ -367,6 +367,42 @@ ruling.
 
 ---
 
+### LOOP-14. The guard refuses ruling-shaped prose in any file, 2026-10-21
+
+**Observed.** The first unattended tick after GAL-D13 was refused three writes it
+had made many times before: the decision queue's disposition section (twice, once
+narrowed), the state file's current-unit paragraph, and a script covering both.
+Same reason as LOOP-13. The tick stopped re-attempting rather than rewording until
+something passed.
+
+**Root cause.** GAL-D13 named files. The guard keys on content: dispositions and
+"the next tick does X" narrative are instructions to a later unattended agent
+whatever file they sit in.
+
+**Produced.** GAL-D15. The queue becomes append-only intake, the ledger the sole
+closure record, the state file's narrative attended carriage. Removing the class
+of write is sounder than ruling on each file, and the general rule is stated by
+content, not by path.
+
+---
+
+### LOOP-15. A crashed owner is invisible until the steal window expires, 2026-10-21
+
+**Observed.** A tick lost its execution bridge mid-run. The mutex ref stayed held,
+its reflog named the generic lock message, and the cursor said nothing, because the
+after-the-fact lock record is only written at release. The next tick saw a held
+lock of unknown provenance and waited.
+
+**Root cause.** The lock record written at release proves a lock was held; it
+cannot show who holds one now.
+
+**Produced.** GAL-D16: the lock_history entry is written at acquisition with
+released_at null and completed at release, so the cursor always names the holder
+and a crashed owner is visible immediately. The steal window becomes the safety
+margin rather than the only evidence.
+
+---
+
 ## Receipt binding: three consecutive packets
 
 The single most repeated finding, and the one that justifies rule 3 on its own.
@@ -482,9 +518,9 @@ Not rules, but every one of these cost a tick.
 | 3. Review the delivered tip | the three binding failures, DEFECT-2, DEFECT-3, INV-2 |
 | 4. One in flight | LOOP-8 |
 | 5. Terminal status only | LOOP-5 |
-| 6. A lock must be a lock | LOOP-6 and its timestamp rider |
+| 6. A lock must be a lock | LOOP-6 and its timestamp rider, LOOP-15 |
 | 7. Rulings originate in the ledger | LOOP-9, the LOOP-8 provenance incident, LOOP-4 |
 | 8. Criteria covered by grant | DEFECT-4 |
 | 9. Nothing waits on a human | D17, the DEC queue, every parked item |
 | 10. Model matches blast radius | LOOP-3, the digest cadence incident |
-| 11. Instruction files are attended-only | LOOP-13, and LOOP-9 for why the prompt is not the alternative |
+| 11. Instruction files are attended-only | LOOP-13, LOOP-14, and LOOP-9 for why the prompt is not the alternative |

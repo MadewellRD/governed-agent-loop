@@ -362,6 +362,57 @@ Reasoning:   GAL-D09 held: terminal status only was the rule that kept the
 
 ---
 
+### GAL-D15: The decision queue is append-only intake; the ledger is the sole closure record
+Date:        2026-10-21
+Decider:     Supervisor under the operator's explicit delegation, operator present
+             (reference: LOOP-14, attended session 2026-10-21)
+Origin:      Following GAL-D13, an unattended tick was refused writes to the
+             decision queue and the project state file, which GAL-D13 did not
+             cover. The refused writes were descriptive in form but carried
+             ruling-shaped prose: dispositions, and a narrative telling later
+             ticks what the current unit was.
+Question:    Which bookkeeping writes may an unattended run make once instruction-
+             shaped content is refused regardless of file?
+Options:     (a) Extend GAL-D13 to the queue and the state file by name.
+             (b) Stop writing closure into the queue at all: the queue becomes
+                 append-only intake, the ledger is the sole closure record, and
+                 closure is read by presence of a ledger entry.
+             (c) Retry refused writes next run.
+             (d) Leave the files stale indefinitely.
+Disposition: (b), plus the state-file amendment from (a): an unattended run writes
+             only the state file's header; the narrative is attended carriage.
+             (c) and (d) rejected.
+Reasoning:   (b) removes the class of write that was being refused instead of
+             naming files, and matches how the two records are actually read:
+             the ledger as authority, the queue as a queue. A queue that reports
+             ruled items as open will eventually cause a run to re-raise a settled
+             decision, which is the rule 7 failure in a different file. The
+             general form is: text that reads as a ruling or as an instruction to a
+             later run is attended-only by content, whatever file it lands in.
+
+---
+
+### GAL-D16: The lock owner is written to the cursor at acquisition
+Date:        2026-10-21
+Decider:     Supervisor under the operator's explicit delegation, operator present
+             (reference: LOOP-15, attended session 2026-10-21)
+Origin:      A tick lost its execution bridge mid-run and left the mutex ref held
+             with no cursor evidence of who held it. The next tick could only wait
+             out the steal window. The after-the-fact lock record landed by the
+             GAL-D13 carriage records a lock only once it has been released.
+Question:    How does a later run tell a crashed owner from a live one?
+Options:     (a) Write the lock_history entry at acquisition with released_at null
+                 and fill it at release.
+             (b) Rely on the reflog and the steal window.
+             (c) Shorten the steal window.
+Disposition: (a).
+Reasoning:   One extra cursor write per run, and the cursor is then honest about
+             who holds the lock at every moment. The steal window stays as the
+             safety margin instead of being the only evidence. (b) leaves the gap;
+             (c) trades it for a liveness race.
+
+---
+
 ## Adopting this ledger
 
 Copy this file to `docs/DECISIONS.md` in the target repository. Keep the format
