@@ -413,6 +413,35 @@ Reasoning:   One extra cursor write per run, and the cursor is then honest about
 
 ---
 
+### GAL-D17: The plan is countable and the status page is generated from the tree
+Date:        2026-10-21
+Decider:     Operator (reference: three rulings in an attended session; design by
+             the supervisor under that direction)
+Origin:      The reference project's tracker was updated by hand from whichever
+             session was open, had no data source of record, could not project a
+             date, and its own status session said so.
+Question:    How does the loop give constant, trustworthy visibility to someone
+             who will not read handoffs?
+Options:     (a) A scheduled task that rewrites a tracker page from prose.
+             (b) A plan of record in the repository (plan.json, under the gate), a
+                 deterministic read-only snapshot script with provenance shas, a
+                 validator that gates publication, and a fixed page the status
+                 task republishes with a fresh snapshot beside it. The only prose
+                 is a labeled narrative.
+             (c) Keep the hand-maintained tracker.
+Disposition: (b). The hand-maintained tracker is retired. Projection is derived
+             from measured throughput and a declared packets-per-unit assumption
+             the page shows; it is never chosen.
+Reasoning:   Every number an investor reads should trace to a commit. (a)
+             inherits every weakness of the hand tracker and adds drift. (b) puts
+             judgment in two reviewable places, the script and the page, and keeps
+             the task itself mechanical, which is why the cheapest model runs it
+             (rule 10). The task is read-only on the repository and never takes
+             the lock: it is a fifth loop item beside tick, digest and the two
+             watchdogs, not a second supervisor.
+
+---
+
 ## Adopting this ledger
 
 Copy this file to `docs/DECISIONS.md` in the target repository. Keep the format

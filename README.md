@@ -167,7 +167,12 @@ queue is append-only intake and closure lives only in the ledger.
 | `prompts/` | Stored prompts for the supervisor, the decision digest and both watchdogs. |
 | `scripts/gate.template.ps1` | The gate skeleton. The binding rule is the load-bearing part. |
 | `scripts/setup-loop.template.ps1` | Arming: tool paths, credentials, execution profile, policy. |
-| `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the eight swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the four scheduled tasks, verifies. |
+| `scripts/status-snapshot.template.ps1` | The status plane: a deterministic, read-only rendering of the tree into one JSON document, with provenance shas on every section. |
+| `scripts/status-validate.template.ps1` | Gates publication of a snapshot: schema plus semantic checks; the status task refuses to publish on failure. |
+| `protocol/plan.schema.json` | The plan of record: every unit of work, its lane and phase, its status, its evidence, its conflicts. Countable, under the gate. |
+| `protocol/status-snapshot.schema.json` | The snapshot contract the page renders and the validator enforces. |
+| `status/build-status.template.html` | The build-status page: fixed renderer over the snapshot, investor first. The status task republishes it with a new snapshot beside it; it never writes HTML. |
+| `prompts/status.prompt.md` | The fifth stored prompt: the status task. || `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the eight swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the four scheduled tasks, verifies. |
 
 ---
 

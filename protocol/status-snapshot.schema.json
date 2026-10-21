@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gal-status-snapshot-v1",
+  "title": "{{PROJECT_NAME}} status snapshot",
+  "description": "Output of scripts/status-snapshot.ps1: a deterministic, read-only rendering of the tree for the build-status page. Everything except `narrative` is computed; `narrative` is written by the status task and labeled as prose on the page. The status task validates a snapshot against this schema and refuses to publish on failure.",
+  "type": "object",
+  "required": ["schema", "generated_at", "generator", "provenance", "repo", "loop", "merges", "throughput", "projection", "phases", "lanes", "decisions", "risks", "invariants"],
+  "properties": {
+    "schema": { "const": "gal-status-snapshot-v1" },
+    "generated_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" },
+    "generator": { "type": "object", "required": ["script", "version", "deterministic"], "properties": { "deterministic": { "const": true } } },
+    "provenance": { "type": "object", "required": ["main", "cursor_branch_tip", "plan", "receipts_on_main"], "properties": { "main": { "type": "string", "pattern": "^[0-9a-f]{40}$" } } },
+    "repo": {
+      "type": "object",
+      "required": ["main_short", "origin_behind", "origin_ahead", "pushed", "last_deploy", "gate"],
+      "properties": {
+        "origin_ahead": { "type": "integer", "minimum": 0 }, "origin_behind": { "type": "integer", "minimum": 0 }, "pushed": { "type": "boolean" },
+        "last_deploy": { "type": "object", "required": ["sha", "date", "commits_since", "packets_since"] },
+        "gate": { "type": "object", "required": ["receipts", "passed", "pass_rate_pct"] }
+      }
+    },
+    "loop": {
+      "type": "object",
+      "required": ["state", "last_tick", "tick_age_minutes", "lock_held", "empty_tick_streak", "inbox", "queued"],
+      "properties": { "lock_held": { "type": "boolean" }, "empty_tick_streak": { "type": "integer", "minimum": 0 }, "scheduler": { "type": ["object", "null"] } }
+    },
+    "merges": { "type": "array", "items": { "type": "object", "required": ["packet", "merged_at", "merged_sha"] } },
+    "halted": { "type": "array" },
+    "carriages": { "type": "array" },
+    "throughput": { "type": "object", "required": ["window_start", "days", "packets", "per_day", "daily", "cumulative"], "properties": { "per_day": { "type": "number", "minimum": 0 } } },
+    "projection": {
+      "type": "object",
+      "required": ["basis", "scope_units", "done_units", "remaining_units", "packets_per_unit", "packets_per_unit_band", "packets_per_day", "packets_needed", "projected_date", "projected_date_band", "original_end", "factor_is_assumption"],
+      "properties": { "factor_is_assumption": { "const": true } }
+    },
+    "phases": { "type": "array", "items": { "type": "object", "required": ["name", "total", "done", "in_progress", "planned", "blocked", "pct_done", "units"] } },
+    "lanes": { "type": "array" },
+    "decisions": { "type": "object", "required": ["open", "recent_rulings"] },
+    "risks": { "type": "array", "items": { "type": "object", "required": ["id", "level", "text"], "properties": { "level": { "enum": ["high", "medium", "low", "info"] } } } },
+    "invariants": { "type": "array", "minItems": 1 },
+    "narrative": { "type": ["string", "null"], "maxLength": 900 }
+  }
+}

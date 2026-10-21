@@ -26,6 +26,7 @@ Fill these in before you copy anything. Everything else derives from them.
 | 6 | Scheduler | Claude scheduled tasks, hourly supervisor |
 | 7 | Exclusive resources the gate needs | one Postgres instance via `TEST_DATABASE_URL` |
 | 8 | Decision ledger path | `docs/DECISIONS.md`, append only, gated |
+| 9 | Registry file and status publish target | `docs/engineering-spec/tracker.json` seeds the plan of record; the page publishes as a claude.ai artifact the status task republishes |
 
 ---
 
@@ -216,6 +217,23 @@ that there is exactly one.
 
 Nothing watches the outermost watchdog. Say so in its own alerts rather than
 implying coverage you do not have, and stop the regress there on purpose.
+
+---
+
+## 9. Registry file and status publish target
+
+The plan of record (`plan.json`) is seeded from whatever structured registry the
+project already keeps (`{{SP:9:REGISTRY_FILE}}`) plus the build-state file's prose,
+with every disagreement between them recorded on the unit, never resolved by a
+script. The status page publishes to `{{STATUS_ARTIFACT_URL}}`; the status task
+republishes the same artifact with a fresh snapshot beside it. Swap the registry
+format in the seeding step and the publish target in the prompt. The snapshot's
+`ThroughputWindowStart` is the date the capacity model last changed and
+`LastDeployCommit` is the last recorded deploy on main; both are parameters.
+
+**What breaks if you get it wrong.** A registry that is not under the gate gives
+the page numbers nothing can audit. A publish target that the task creates fresh
+each run scatters the history across artifacts; the task republishes one URL.
 
 ---
 

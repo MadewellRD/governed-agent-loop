@@ -141,6 +141,7 @@ runs when the computer is asleep).
 | digest | daily, user's evening | yes | `digest.prompt.md` |
 | `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | `watchdog-device.prompt.md` |
 | cloud watchdog | every 6h | no | `watchdog-cloud.prompt.md` |
+| status task | every 2h, after the tick | yes | `status.prompt.md` (after the status plane is seeded: `plan.json` from the project's registry, the page published once by hand, its URL in the prompt) |
 
 Model: ask the user to name the model for each. A device-bound task carries its
 model in a signed session request and cannot be changed afterwards through the

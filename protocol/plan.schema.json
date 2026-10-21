@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gal-plan-v1",
+  "title": "{{PROJECT_NAME}} plan of record",
+  "description": "The countable form of the plan. Seeded from {{SP:9:REGISTRY_FILE}} and {{BUILD_STATE_FILE}}; maintained under the gate. Ticks move a unit's status at dispatch and merge; units are added, re-scoped or cut only in an attended session (D33). Conflicts between sources are recorded, never silently resolved.",
+  "type": "object",
+  "required": ["schema", "generated_at", "generated_from", "plan_of_record", "assumptions", "lanes", "units", "invariants"],
+  "properties": {
+    "schema": { "const": "gal-plan-v1" },
+    "generated_at": { "type": "string" },
+    "generated_from": { "type": "object", "required": ["main", "tracker_json_blob", "status_md_blob"] },
+    "plan_of_record": {
+      "type": "object",
+      "required": ["name", "started", "original_end", "rule", "phases"],
+      "properties": {
+        "name": { "type": "string" }, "started": { "type": "string" }, "original_end": { "type": "string" },
+        "rule": { "type": "string" }, "rebaseline": { "type": ["string", "null"] },
+        "phases": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "assumptions": {
+      "type": "object",
+      "required": ["packets_per_unit_default", "packets_per_unit_band"],
+      "properties": {
+        "packets_per_unit_default": { "type": "number", "exclusiveMinimum": 0 },
+        "packets_per_unit_band": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } },
+        "note": { "type": "string" }
+      }
+    },
+    "lanes": { "type": "array", "items": { "type": "object", "required": ["id", "name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "exit": { "type": "string" } } } },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "lane", "status", "source"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9-]*$" },
+          "title": { "type": "string" },
+          "lane": { "type": "string" },
+          "phase": { "type": ["string", "null"], "description": "Membership in the plan of record; null means outside the dated plan." },
+          "status": { "enum": ["planned", "queued", "in_flight", "in_progress", "done", "blocked", "parked", "cut"] },
+          "source": { "type": "string" },
+          "size_packets": { "type": ["number", "null"], "description": "Estimated packets to complete; null until estimated. The snapshot uses assumptions.packets_per_unit_default when null." },
+          "evidence": { "type": ["object", "null"], "properties": { "merged_sha": { "type": "string" }, "receipt": { "type": "string" }, "packets": { "type": "array", "items": { "type": "string" } } } },
+          "conflict": { "type": ["string", "null"], "description": "A disagreement between sources, stated and left for the operator." },
+          "note": { "type": ["string", "null"] },
+          "labels": { "type": "array" }, "depends": { "type": "array" }
+        }
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "items": { "type": "object", "required": ["id", "name", "status", "evidence", "asserted"], "properties": { "status": { "enum": ["enforced", "in_progress", "planned", "unverified"] } } }
+    }
+  }
+}

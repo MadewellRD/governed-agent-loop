@@ -406,3 +406,33 @@ watchdog layer compensates but does not cure it.
 And it assumes an operator who will dispose of parked items on a cadence. The loop
 never blocks on a human, but it does accumulate decisions, and a queue that is never
 drained is a loop that eventually has nothing dispatchable.
+
+## 13. The status plane
+
+Everything above produces evidence; none of it produces visibility. A loop that
+only writes handoffs is legible to the person who reads handoffs and to no one
+else. The status plane is the part that lets an investor, a manager or the
+operator on a phone answer four questions without reading anything: where are
+we, when does it finish, what is in flight, what is blocking.
+
+It has three layers and one direction of flow. The plan of record (`plan.json`)
+makes the plan countable: every unit, its lane and phase, its status, its evidence
+when done. It lives in the repository under the gate, so it has the same
+provenance as the code; unattended runs move a unit's status at dispatch and
+merge and nothing else. The snapshot script reads the tree by ref and emits one
+document with the sha of every source on it; it is deterministic and contains no
+judgment, and a validator refuses to publish anything that fails its schema or
+its arithmetic. The page is a fixed renderer over that document, built once and
+designed once; the status task never writes HTML, it republishes the page with a
+new snapshot beside it.
+
+Projection is the one number people will quote, so it is derived, never chosen:
+merged units per day since the capacity model last changed, remaining units
+times a packets-per-unit factor that the page displays as the assumption it is,
+plus the deploy that has not happened. When the assumption is wrong the page
+says so in its own band, and the fix is to estimate units, not to argue with the
+date.
+
+The task itself is mechanical, which is the point. It runs two scripts, writes
+three sentences that the page labels as prose, and publishes. It is read-only on
+the repository and never takes the lock. Rule 10 puts it on the cheapest model.
