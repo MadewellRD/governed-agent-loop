@@ -199,28 +199,28 @@ hardening it.
 
 ## Vocabulary
 
-**Packet** — one bounded unit of work: scope, acceptance criteria, invariants in
+**Packet**: one bounded unit of work: scope, acceptance criteria, invariants in
 force, required tests, branch convention. Small enough to review in one pass and to
 gate once.
 
-**Tick** — one run of the supervisor.
+**Tick**: one run of the supervisor.
 
-**Cursor** — the single mutable record of loop position: state, current packet, job
+**Cursor**: the single mutable record of loop position: state, current packet, job
 id, attempt, last tick, holds, lock.
 
-**Gate** — the validation suite that decides whether work may merge. Hard by
+**Gate**: the validation suite that decides whether work may merge. Hard by
 definition; there is no override path.
 
-**Receipt** — the gate's output, bound by content hash to the exact tree it
+**Receipt**: the gate's output, bound by content hash to the exact tree it
 validated.
 
-**Binding** — the hash that ties a receipt to a tree, computed over the tracked file
+**Binding**: the hash that ties a receipt to a tree, computed over the tracked file
 list with the receipts directory excluded.
 
-**Hold** — an operator-set flag that interposes between the gate and the merge. A
+**Hold**: an operator-set flag that interposes between the gate and the merge. A
 held tick still harvests, reviews and gates, then stops.
 
-**Park** — to record something needing a decision and continue, so no run ever
+**Park**: to record something needing a decision and continue, so no run ever
 blocks on a human.
 
 ---

@@ -14,7 +14,7 @@ defaults stated here.
 
 | Placeholder | Meaning | Reference value |
 |---|---|---|
-| `{{SP:1:REPO_ROOT}}` | absolute repo path | `D:\dev\signaldesk_aitsm` |
+| `{{SP:1:REPO_ROOT}}` | absolute repo path | `D:\dev\<project>` |
 | `{{SP:1:LOOP_HOME}}` | loop files directory, repo-relative | `ops/pm` |
 | `{{SP:1:MAIN}}` | the integration branch | `main` |
 | `{{SP:1:CURSOR_BRANCH}}` | the cursor's own branch | `ops/pm-loop` |
@@ -34,7 +34,7 @@ defaults stated here.
 | `{{PRODUCT_INVARIANTS}}` | the product's hard invariants, reviewed first | see the reference governance doc |
 | `{{LOCK_STALE_MINUTES}}` | lock age at which a steal is permitted | `50` |
 | `{{LIVENESS_GRACE_MINUTES}}` | grace past timeout before indeterminate | `10` |
-| `{{PM_IDENTITY}}` | git author for supervisor commits | `SignalDesk AiTSM Automation <automation@signaldesk.local>` |
+| `{{PM_IDENTITY}}` | git author for supervisor commits | `<Project> Automation <automation@<project>.invalid>` |
 
 ## Standing rules that apply to every step
 
