@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MadewellRD/governed-agent-loop/protocol/gate-receipt.schema.json",
+  "title": "Governed Agent Loop gate receipt, v2 (self-attesting)",
+  "description": "The evidence contract. A receipt is evidence only because it is bound by content hash to the exact tree it validated, and because it names the commit it was generated against (GAL-D04). Version 2 makes head_commit_at_gen required and adds binds_commit, so the question 'does this receipt describe the commit that merged' is answered by the receipt itself rather than by a reviewer recomputing a hash.",
+  "$comment": "THE BINDING RULE, normative. bound_tree_hash is the SHA-256, hex lowercase, of the UTF-8 bytes of: the lines of `git ls-files -s` run from the repository root, with every line whose path begins with the receipts directory removed, sorted ordinally (byte order, not locale), joined with a single LF and no trailing LF. The receipts directory is the ONLY exclusion. Widening it silently destroys the property that committing a receipt does not change what it binds. The rule is immutable; a project may change which directory is excluded, never the rule.",
+  "type": "object",
+  "required": [
+    "schema",
+    "receipt_id",
+    "timestamp_utc",
+    "head_commit_at_gen",
+    "bound_tree_hash",
+    "binds_commit",
+    "working_tree_dirty",
+    "steps",
+    "gating_steps_failed",
+    "all_passed"
+  ],
+  "properties": {
+    "schema": { "const": "gal-gate-receipt-v2" },
+
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{12}$",
+      "description": "The first twelve hex characters of bound_tree_hash. Also the receipt's filename stem, so two receipts for the same tree collide by design and the later one overwrites the earlier at the same path, with both remaining in history."
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "Host clock at receipt generation."
+    },
+
+    "head_commit_at_gen": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "REQUIRED in v2. The full sha of HEAD at the moment the gate started. A receipt without this is not evidence and the gate refuses to run."
+    },
+    "git_head_at_start": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "git_head_at_end": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "stable_during_run": {
+      "type": "boolean",
+      "description": "True iff git_head_at_start equals git_head_at_end and the working tree was clean at both. A gate that saw HEAD move cannot bind anything."
+    },
+
+    "bound_tree_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Per the binding rule in $comment, computed over the STAGED manifest (git ls-files -s) at generation."
+    },
+    "binds_commit": {
+      "type": ["boolean", "null"],
+      "description": "TRUE when the staged manifest, receipts directory excluded, is byte-identical to head_commit_at_gen's tree manifest rendered to the same `ls-files -s` line shape (via git ls-tree -r), receipts directory excluded on both sides. That is the self-attestation that this receipt describes the commit named, not merely the working tree. NULL under the stage-then-gate-then-commit workflow where the commit does not yet exist at gate time; the supervisor must then verify by recomputation after the commit lands, and record that it did. Never FALSE: a mismatch is a gate failure, not a receipt field."
+    },
+    "binding_rule_version": { "const": 1 },
+
+    "working_tree_dirty": {
+      "type": "boolean",
+      "description": "True if any tracked file was modified or any untracked non-ignored file existed at generation, outside the receipts directory. A dirty tree at gate time is reported; whether it blocks is a project policy stated in the gate script."
+    },
+
+    "toolchain": {
+      "type": "object",
+      "description": "What ran the gate. Pinned so a receipt is reproducible.",
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "matches_pin": { "type": "boolean" }
+      }
+    },
+
+    "preconditions": {
+      "type": "object",
+      "description": "Each exclusive resource or environment fact the gate needs, and whether it was present. A missing precondition fails the gate closed; it is never skipped silently. Keys are project-specific, e.g. test_database_url_set.",
+      "additionalProperties": { "type": "boolean" }
+    },
+
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "blocking", "passed"],
+        "properties": {
+          "name": { "type": "string" },
+          "blocking": {
+            "type": "boolean",
+            "description": "Blocking steps gate the merge. Advisory steps are recorded and reported. An advisory step that fails on every receipt for many runs has become noise and should be fixed or formally accepted with a dated entry; see FAILURE-LOG on AUDIT-1."
+          },
+          "passed": { "type": "boolean" },
+          "exit_code": { "type": ["integer", "null"] },
+          "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "command": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "gating_steps_failed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of steps with blocking=true and passed=false."
+    },
+    "all_passed": {
+      "type": "boolean",
+      "description": "True iff gating_steps_failed is 0 and every precondition was present. Advisory failures do not affect it."
+    },
+
+    "generated_by": {
+      "type": "object",
+      "description": "Who ran the gate. The supervisor's independent receipt and the agent's self-run receipt are both valid receipts; only the supervisor's is used to merge.",
+      "properties": {
+        "role": { "enum": ["agent", "supervisor", "operator"] },
+        "identity": { "type": "string" },
+        "job_id": { "type": "string" }
+      }
+    },
+
+    "container_build_proof": {
+      "type": ["string", "null"],
+      "description": "If the project requires an image build as part of the gate, the build output summary or job id. Null if not required. A concrete reason, never 'n/a', if required and not produced; that is a halt."
+    }
+  },
+  "additionalProperties": true,
+
+  "examples": [
+    {
+      "schema": "gal-gate-receipt-v2",
+      "receipt_id": "239e6e26b70f",
+      "timestamp_utc": "2026-10-20T20:38:51Z",
+      "head_commit_at_gen": "638a21a0f2c7d1e4b9a35c8d7e6f1a2b3c4d5e6f",
+      "git_head_at_start": "638a21a0f2c7d1e4b9a35c8d7e6f1a2b3c4d5e6f",
+      "git_head_at_end": "638a21a0f2c7d1e4b9a35c8d7e6f1a2b3c4d5e6f",
+      "stable_during_run": true,
+      "bound_tree_hash": "239e6e26b70f4a1c8e2d5b7f9a3c6e1d4b8f2a7c5e9d1b3f6a8c2e4d7b9f1a3c",
+      "binds_commit": true,
+      "binding_rule_version": 1,
+      "working_tree_dirty": false,
+      "toolchain": { "name": "rustc", "version": "1.95.0", "matches_pin": true },
+      "preconditions": { "test_database_url_set": true, "docker_daemon_reachable": true },
+      "steps": [
+        { "name": "fmt", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 4120 },
+        { "name": "check", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 61800 },
+        { "name": "clippy", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 98200 },
+        { "name": "test-workspace", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 412000 },
+        { "name": "test-db", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 188000 },
+        { "name": "doc", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 77000 },
+        { "name": "gitleaks", "blocking": true, "passed": true, "exit_code": 0, "duration_ms": 2100 },
+        { "name": "audit", "blocking": false, "passed": false, "exit_code": 1, "duration_ms": 3400, "note": "3 advisories, see AUDIT-2" }
+      ],
+      "gating_steps_failed": 0,
+      "all_passed": true,
+      "generated_by": { "role": "supervisor", "identity": "tick26-2024z", "job_id": "ff4794e7-144d-4151-962c-af5cc0fd8d37" },
+      "container_build_proof": null
+    }
+  ]
+}

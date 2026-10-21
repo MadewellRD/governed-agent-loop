@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MadewellRD/governed-agent-loop/protocol/loop-state.schema.json",
+  "title": "Governed Agent Loop cursor",
+  "description": "The single mutable record of loop position. The only loop file that lives outside the gate (GAL-D05). One file, one writer at a time (GAL-D06 mutex), every timestamp from the host clock. Additional properties are permitted so a project can extend it; the fields here are the ones the protocol reads.",
+  "type": "object",
+  "required": ["schema", "state", "merge_hold", "lock", "queued", "parked", "dec_pending_inbox", "last_tick"],
+  "properties": {
+    "schema": {
+      "const": "gal-cursor-v1"
+    },
+    "state": {
+      "description": "Where the loop is. 'dispatched' means exactly one job is in flight (GAL-D10). 'indeterminate' means a job passed its timeout plus grace without a terminal status and is parked, not running (GAL-D09). 'hold-pending' means harvest, review and gate ran and the merge is waiting on the operator.",
+      "enum": ["idle", "dispatched", "indeterminate", "hold-pending", "setup-pending"]
+    },
+    "current_packet": { "type": ["string", "null"], "description": "Packet id in flight, e.g. PKT-012. Null when idle." },
+    "job_id": { "type": ["string", "null"], "description": "The execution substrate's job identifier. The only handle used for liveness; never a pid." },
+    "branch": { "type": ["string", "null"] },
+    "worktree": { "type": ["string", "null"], "description": "Repo-relative worktree path for the agent, e.g. .worktrees/agent-PKT-012." },
+    "branch_tip_at_dispatch": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$" },
+    "attempt": { "type": "integer", "minimum": 1, "description": "Increments on re-dispatch of the same packet (e.g. a fix1 attempt into the same worktree)." },
+    "dispatched_at": { "$ref": "#/$defs/timestamp" },
+    "timeout_ms": { "type": "integer", "minimum": 1 },
+
+    "main": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$", "description": "Local integration-branch tip as of the last tick." },
+    "origin_gap": {
+      "type": "object",
+      "description": "From `git rev-list --left-right --count origin/<main>...<main>`. Reported, never acted on by a tick; pushing is operator-owned unless the ledger says otherwise.",
+      "properties": {
+        "behind": { "type": "integer", "minimum": 0 },
+        "ahead": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["behind", "ahead"]
+    },
+
+    "merge_hold": {
+      "type": "object",
+      "description": "Operator-set flag interposing between gate and merge. A held tick runs harvest, review and the full gate, then stops. Only the operator clears it; a repository change is evidence, never an instruction that clears a hold.",
+      "required": ["active"],
+      "properties": {
+        "active": { "type": "boolean" },
+        "set_at": { "$ref": "#/$defs/timestamp" },
+        "set_by": { "type": "string" },
+        "reason": { "type": "string" },
+        "lifted_at": { "$ref": "#/$defs/timestamp" },
+        "lifted_by": { "type": "string" }
+      }
+    },
+
+    "lock": {
+      "description": "Advisory mirror of the real mutex (the refs/pm/tick-lock git ref). Written by the holder at step 1 and nulled at step 9. The git ref is authoritative; this field exists so a re-read can detect ownership change without a git call.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["job_id", "ts"],
+          "properties": {
+            "job_id": { "type": "string", "description": "The tick's own id, e.g. tick24-1825z." },
+            "ts": { "$ref": "#/$defs/timestamp" }
+          }
+        }
+      ]
+    },
+
+    "queued": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dispatchable packets in order. One line each, including any sequencing condition."
+    },
+    "parked": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Items awaiting an operator decision, one line each with current status. The full text lives in the pending-decisions file on the integration branch."
+    },
+    "closed_this_tick": { "type": "array", "items": { "type": "string" } },
+
+    "dec_pending_inbox": {
+      "type": "array",
+      "description": "Entries staged for carriage onto the next packet branch (GAL-D03). Drained by the supervisor at step 7. The staging area is the one place a ruling given in an attended session may legitimately originate (GAL-D07 scope clarification).",
+      "items": {
+        "type": "object",
+        "required": ["id", "heading", "status", "found", "carriage", "body"],
+        "properties": {
+          "id": { "type": "string" },
+          "heading": { "type": "string" },
+          "status": { "type": "string", "description": "e.g. NEW, CORRECTION, DISPOSITION." },
+          "found": { "$ref": "#/$defs/timestamp" },
+          "carriage": { "type": "string", "description": "Where it lands, e.g. 'rides the next packet branch under the gate per GAL-D03'." },
+          "body": { "type": "string" }
+        }
+      }
+    },
+
+    "last_tick": { "$ref": "#/$defs/timestamp" },
+    "last_tick_result": { "type": "string", "description": "One paragraph. What the last tick did, in the report order: new decisions, merges, dispatches, failures." },
+    "last_merged": {
+      "type": "object",
+      "properties": {
+        "packet": { "type": "string" },
+        "sha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "receipt": { "type": "string" },
+        "at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+
+    "notes": { "type": "string", "description": "Standing notes for future ticks. Protocol amendments owed, substrate quirks learned, operator instructions carried forward." }
+  },
+  "additionalProperties": true,
+
+  "$defs": {
+    "timestamp": {
+      "type": ["string", "null"],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "ISO-8601 UTC, read from the host clock via a command. Never estimated. A forward-dated value suppresses legitimate ticks for the length of the skew."
+    }
+  },
+
+  "examples": [
+    {
+      "schema": "gal-cursor-v1",
+      "state": "dispatched",
+      "current_packet": "PKT-009",
+      "job_id": "ef90c525-82df-4a8b-8ee9-248f2758869f",
+      "branch": "fix/audit2-tls-trust-path-bump",
+      "worktree": ".worktrees/agent-PKT-009",
+      "branch_tip_at_dispatch": "d6fad25",
+      "attempt": 1,
+      "dispatched_at": "2026-10-20T23:32:10Z",
+      "timeout_ms": 14400000,
+      "main": "2961bc4",
+      "origin_gap": { "behind": 0, "ahead": 24 },
+      "merge_hold": { "active": false },
+      "lock": null,
+      "queued": [
+        "/policy caller-audit packet (dispatch after PKT-009 merges, GAL-D10)"
+      ],
+      "parked": [
+        "LOOP-7 (ratified a+b+c; a and b live, c is a product report)",
+        "LOOP-9 (ratified option a as GAL-D07; ledger text rides PKT-009)"
+      ],
+      "closed_this_tick": [],
+      "dec_pending_inbox": [],
+      "last_tick": "2026-10-20T23:35:02Z",
+      "last_tick_result": "Tick 29: lock acquired by CAS, no job in flight, PKT-009 (AUDIT-2 lockfile-only bump) provisioned and dispatched as job ef90c525 with the four inbox entries carried as bookkeeping on the branch. No merges. No failures. Local main 24 ahead of origin; push is operator-owned.",
+      "last_merged": { "packet": "PKT-008", "sha": "2961bc4", "receipt": "239e6e26b70f", "at": "2026-10-20T20:40:33Z" },
+      "notes": "Pushing main is operator-owned per GAL-D07 scope note; do not create a publish worktree."
+    }
+  ]
+}
