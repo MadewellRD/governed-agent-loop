@@ -131,12 +131,12 @@ try {
     # 3. Directories and ledgers. Create only what is absent.
     # -----------------------------------------------------------------------
     Step 'ledgers and directories'
-    $dirs = @($OpsDir, (Join-Path $OpsDir 'packets'), $ReceiptsDir, 'docs')
+    $dirs = @($OpsDir, (Join-Path $OpsDir 'packets'), (Join-Path $OpsDir 'receipts'), $ReceiptsDir, 'docs')
     foreach ($d in $dirs) {
         if (Test-Path $d) { Skip $d } else { New-Item -ItemType Directory -Force -Path $d | Out-Null; Ok "mkdir $d" }
     }
     # .gitkeep so empty dirs survive the first commit.
-    foreach ($d in @((Join-Path $OpsDir 'packets'), $ReceiptsDir)) {
+    foreach ($d in @((Join-Path $OpsDir 'packets'), (Join-Path $OpsDir 'receipts'), $ReceiptsDir)) {
         $k = Join-Path $d '.gitkeep'
         if (-not (Test-Path $k)) { New-Item -ItemType File -Path $k | Out-Null }
     }
@@ -231,7 +231,7 @@ for the format and GAL-D01..D12 for the loop's own decisions.
     Step 'verification'
     $required = @($cursorPath, $protoDest, (Join-Path $OpsDir 'DEC-PENDING.md'),
                   (Join-Path $OpsDir 'PM-HANDOFF.md'), 'docs/DECISIONS.md',
-                  (Join-Path $OpsDir 'packets'), $ReceiptsDir)
+                  (Join-Path $OpsDir 'packets'), (Join-Path $OpsDir 'receipts'), $ReceiptsDir)
     $missing = @($required | Where-Object { -not (Test-Path $_) })
     if ($missing.Count) { Fail "missing after setup: $($missing -join ', ')" }
     Ok 'all loop paths present'
