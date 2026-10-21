@@ -158,6 +158,7 @@ count is the wrong axis; consequence is the right one.
 | `prompts/` | Stored prompts for the supervisor, the decision digest and both watchdogs. |
 | `scripts/gate.template.ps1` | The gate skeleton. The binding rule is the load-bearing part. |
 | `scripts/setup-loop.template.ps1` | Arming: tool paths, credentials, execution profile, policy. |
+| `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the eight swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the four scheduled tasks, verifies. |
 
 ---
 
