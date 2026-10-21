@@ -250,7 +250,7 @@ Never append to a branch whose gate receipt already binds its tree.
 8a. **One packet in flight.** If `state` is `dispatched` after step 3, do not
 dispatch. If the queue is empty, go to step 9.
 
-8b. Write the next packet from `protocol/packet-TEMPLATE.md` into
+8b. Write the next packet from `{{SP:1:LOOP_HOME}}/packet-TEMPLATE.md` into
 `{{SP:1:LOOP_HOME}}/packets/<id>.md`. Cut the branch from `{{SP:1:MAIN}}`. Create
 `.worktrees/agent-<id>` on it. Commit the bookkeeping from step 7 plus the packet
 file as the first commit on the branch, authored as `{{PM_IDENTITY}}`.
@@ -269,7 +269,7 @@ program:     {{SP:5:AGENT_BIN}}
 cwd:         {{SP:1:REPO_ROOT}}\.worktrees\agent-<id>
 credential:  {{SP:5:AGENT_CREDENTIAL}}
 timeout_ms:  {{SP:5:AGENT_TIMEOUT_MS}}
-args:        see prompts/agent-dispatch.md
+args:        see {{SP:1:LOOP_HOME}}/agent-dispatch.md
 ```
 
 The prompt names the packet file in the working directory and the agent
