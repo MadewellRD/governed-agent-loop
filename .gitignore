@@ -1,0 +1,16 @@
+# Loop runtime state that must never be committed from a target project
+# (kept here so a copied kit starts with the right ignores)
+*.bak
+*.bak-*
+*.tmp
+_to_delete/
+
+# Editor and OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local scratch
+scratch/

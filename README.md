@@ -224,4 +224,4 @@ blocks on a human.
 
 ---
 
-Licensed under AGPL-3.0 to match the reference implementation. See `LICENSE`.
+Licensed under Apache-2.0. See `LICENSE`.
