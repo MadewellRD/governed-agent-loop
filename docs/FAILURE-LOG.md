@@ -403,6 +403,98 @@ margin rather than the only evidence.
 
 ---
 
+### LOOP-16. The isolation suite leaked a database per run, 2026-10-22
+
+The shared test server held 471 databases totalling 6.3 GB. 469 were per-test
+throwaways created by one integration suite, one per run, never dropped.
+
+The teardown existed. The suite had a destructor that dropped its database, and on
+failure it printed the error and continued. So the cleanup had been failing for 469
+consecutive runs and reporting it only into a test log nobody read. A destructor is
+also skipped outright when a process is killed or aborts, which this gate had done
+before, so it was never a sufficient guarantee on its own.
+
+It surfaced as an availability problem rather than a disk problem. After a reboot
+the server needed crash recovery and spent over ninety seconds walking those
+directories while refusing every connection. A gate firing in that window would
+have failed for a reason unrelated to the tree.
+
+Three rules came out of it, all folded into the per-run-database packet: a startup
+sweep that drops stale throwaways is a required backstop, because a destructor that
+never runs cannot be fixed by improving the destructor; a failed teardown must
+surface through the gate rather than into a log; and the gate records the server's
+database count in its receipt, so growth is visible every run instead of being
+discovered after an outage. The second is the general lesson: a cleanup that fails
+silently is indistinguishable from one that works.
+
+### LOOP-17. An orphan job record survived a service restart, 2026-10-27
+
+A job record reported itself running with an idle time of 623625 seconds against
+its own 14400 second timeout. The probe found empty logs, a record last updated 133
+milliseconds after launch, a worktree long removed, and no reference to it anywhere
+in the cursor. The host had rebooted seven days after the job started.
+
+It could not be cancelled. The cancel call refused it, because the service that
+owned the record had been replaced at restart, so the runtime held an orphan it had
+no way to reap. A sweep of all 309 records found exactly one in that state, so the
+reaper was not systemically broken.
+
+The useful output was GAL-D29 rather than the cleanup. A record that survives a
+restart still claiming to run is a substrate defect worth recording, and the fix in
+the loop is to stop asking the record and start asking the clock.
+
+### LOOP-18. The supervisor attributed a deliberate pause to a fault, 2026-10-27
+
+The loop was dark for about 97 hours. The next run read the gap as the dispatcher
+outage incident firing a third time, reported that neither watchdog had shortened
+it, and concluded that the alerting layer had become the thing that failed.
+
+Every observation in that report was accurate and the conclusion was wrong. The
+operator had paused the scheduled tasks because the account hit its usage limit, and
+restarted them by hand. The watchdogs were silent because they were paused too.
+
+What made the error available: re-enabling clears the paused state, so after the
+fact a deliberate pause and a recovered fault look identical from the scheduler's
+own fields. Enabled true, no suspension reason, and update timestamps clustered in
+one minute are equally consistent with both, and the cheaper explanation was the
+true one.
+
+The rule: a run that finds a long gap reports the gap and the candidate causes and
+leaves the attribution to a session that can ask. Attributing an outage to a defect
+that did not occur is the misattribution class the provenance decisions exist to
+prevent, applied to operations rather than to rulings, and the cost is concrete. A
+false incident entry would have justified spending a packet hardening an alerting
+layer that worked correctly.
+
+### LOOP-19. Budget exhaustion stopped the loop twice, 2026-10-16 and 2026-10-22
+
+The first time the dispatcher failed on a usage limit and was then auto-disabled,
+costing seventeen hours with a finished agent unharvested. The second time the
+operator paused everything deliberately to stop the spend, costing about 97 hours.
+
+The loop had no visibility into its own consumption and no cadence that scaled with
+available work. The dispatcher ran hourly whether or not anything was queued, and
+because it loads its full protocol before reading any state, an idle run cost very
+nearly what a working run cost. Two consecutive idle runs were observed doing
+exactly that.
+
+Budget is therefore a first-class design constraint for this method, not an
+operational detail, and it is the subject of GAL-D31. The specific trap worth
+naming: the instinct is to cheapen the expensive component, and the expensive
+component is the one doing the review that the whole method depends on.
+
+### DEFECT-6. A ruling named a path that did not exist, 2026-10-27
+
+A decision scoped a gate step to a directory that was not in the tree. The packet
+halted rather than guessing which of two similarly named directories was meant,
+which was correct behaviour, and the cycle was lost.
+
+The decision had been written without a probe, by the supervisor, days after it had
+itself ratified the rule requiring probes at ruling time. It is recorded here rather
+than quietly corrected because the rule's author violating it is the strongest
+available evidence that the rule is necessary and that seniority does not exempt
+anyone from it.
+
 ## Receipt binding: three consecutive packets
 
 The single most repeated finding, and the one that justifies rule 3 on its own.

@@ -440,6 +440,317 @@ Reasoning:   Every number an investor reads should trace to a commit. (a)
              the lock: it is a fifth loop item beside tick, digest and the two
              watchdogs, not a second supervisor.
 
+### GAL-D18: The loop publishes; the operator never pushes
+Date:        2026-10-27
+Decider:     Operator (reference project, attended ruling 2026-10-21, as D40)
+Origin:      Publishing main was the human's job, so the published branch lagged
+             the gated one by however long the human was away, and nobody could
+             tell a merge that had not been pushed from one that had.
+Question:    Who publishes the branch the loop has already gated and merged?
+Options:     (a) The operator pushes when convenient.
+             (b) The supervisor publishes after every fast-forward, through a
+                 governed path with the credential passed by reference, from a
+                 throwaway worktree removed in the same run.
+Disposition: (b). Never force, never mirror, never a branch other than main.
+Reasoning:   A merge the loop performed is a merge the loop should finish. If the
+             publish is refused by a permission layer, that refusal is recorded as
+             evidence for the operator's settings and retried by the next run; it
+             is never a reason to hand the push back to the human, because that
+             reintroduces exactly the lag this closes. Report the gap with a
+             left-right count against the remote rather than counting local
+             commits, so a partial push is visible.
+
+---
+
+### GAL-D19: Machine state is written as a structured round trip
+Date:        2026-10-27
+Decider:     Operator (reference project, as D42)
+Origin:      The cursor is JSON that both a human and a supervisor edit. A prose
+             edit to a machine-read file corrupts it silently and the next reader
+             fails somewhere unrelated.
+Question:    How does anything write the cursor without risking its structure?
+Options:     (a) Careful text editing.
+             (b) Parse the file, confirm that re-serializing the parsed object
+                 reproduces the bytes exactly, then edit the object, re-serialize
+                 and write.
+Disposition: (b). A round trip that is not byte-identical is a refusal to write,
+             not a warning.
+Reasoning:   The byte-identical check is the whole point. It proves the writer's
+             serializer agrees with the file's existing shape before the writer is
+             trusted to replace it, which catches an unexpected key order, a lost
+             unicode escape or a hand edit that did not round trip. Writing is
+             cheap; discovering a corrupted cursor three runs later is not.
+
+---
+
+### GAL-D20: A gate step that cannot run fails the gate
+Date:        2026-10-27
+Decider:     Operator (reference project, as D44)
+Origin:      A gate step whose tool was missing reported success by doing nothing.
+Question:    What does the gate do when a step cannot execute at all?
+Options:     (a) Skip it and note the skip.
+             (b) Fail the gate.
+Disposition: (b). Fail closed. A skip is recorded in the receipt only where a
+             decision has explicitly made that step conditional, and the condition
+             and the skip are both named there.
+Reasoning:   A gate is a claim that the suite ran. A step that silently did not run
+             turns that claim into a lie that nobody can see from the receipt. The
+             cost of (a) is a green gate on an unverified tree, which is the one
+             thing the gate exists to prevent.
+
+---
+
+### GAL-D21: The work commit precedes the gate of record, and the agent asserts the binding
+Date:        2026-10-27
+Decider:     Operator (reference project, as D49)
+Origin:      An agent ran the gate on a dirty tree, so the receipt bound nothing
+             and the packet looked green.
+Question:    How does a reviewer know the agent's gate ran on the work it shipped?
+Options:     (a) Trust the agent's summary.
+             (b) Require the work committed first, the gate run on that commit,
+                 the receipt committed as its own next commit, and the agent to
+                 assert in its receipt that the gate's bound commit equals its work
+                 commit. The review flags a null or mismatched binding.
+Disposition: (b). A null binding means the gate ran on a dirty tree and is not the
+             gate of record.
+Reasoning:   The independent gate the supervisor runs stays authoritative, so the
+             flag alone is not a rejection. But an agent that cannot state what its
+             own gate bound has not demonstrated it understands what it proved, and
+             that is worth catching before review rather than after merge.
+
+---
+
+### GAL-D22: Scope facts come from a probe at ruling time
+Date:        2026-10-27
+Decider:     Operator (reference project, as D50)
+Origin:      A ruling fixed a file list from an agent's halt-receipt prose. The
+             file named did not hold the construct. The packet halted, and the
+             cycle was lost.
+Question:    Where does a decision get its facts about the tree?
+Options:     (a) From the agent output that raised the question.
+             (b) From a read-only probe run at the moment of ruling, cited inline.
+Disposition: (b). Never from an agent's prose, never from memory, never from a
+             prior document that was itself written from either.
+Reasoning:   Agent prose is a claim about the tree made by something that had a
+             reason to stop. Memory is worse: it was true once. A probe costs
+             seconds and converts a ruling from plausible to checkable. When the
+             probe contradicts the intake, say so in the ruling; that contradiction
+             is itself a defect worth recording, and in the reference project it
+             twice caught a supervisor error before it reached a packet.
+
+---
+
+### GAL-D23: Every required criterion names a test the gate can reach
+Date:        2026-10-27
+Decider:     Operator (reference project, as D51, amended by D69 and D77)
+Origin:      Packets carried criteria that no test proved, and later a packet whose
+             surface had no test harness at all could not be cut under the original
+             rule.
+Question:    What makes an acceptance criterion real?
+Options:     (a) A clear statement of the desired behaviour.
+             (b) A named test file that proves it, where the probe shows the
+                 harness that file needs already exists, cited by an existing test
+                 that uses it.
+Disposition: (b), with two amendments. REACHABILITY: a harness that exists is not
+             a harness the criterion can be reached from; the probe shows the path,
+             not just the presence. NO NATIVE HARNESS: for a surface with no
+             language-native test harness, the equivalent is a deterministic
+             self-check script the gate runs over committed fixtures, with each
+             criterion naming the fixture it asserts over. Never prose, never a
+             manual step, never a criterion the gate cannot reach.
+Reasoning:   The rule exists so a criterion is falsifiable by the thing that merges
+             it. Written too narrowly it made its own remedy uncuttable, which is
+             how the amendments arrived. Widening what counts as a test is correct;
+             widening whether one is required is not.
+
+---
+
+### GAL-D24: A receipt commit touches only the receipt directory
+Date:        2026-10-27
+Decider:     Operator (reference project, as D52)
+Origin:      A supervisor committed a receipt alongside an unrelated file, which
+             changed the tree the receipt was binding.
+Question:    What may ride in the commit that carries a gate receipt?
+Options:     (a) Whatever bookkeeping is pending.
+             (b) The receipt directory and nothing else.
+Disposition: (b). Any other surface rides its own commit before the gate runs.
+Reasoning:   The binding rule excludes the receipt directory from the hash so that
+             committing the receipt cannot change what it binds. That exclusion
+             covers that directory and nothing else, so a second file in the same
+             commit invalidates the very receipt being written.
+
+---
+
+### GAL-D25: The scope probe sweeps back-references
+Date:        2026-10-27
+Decider:     Operator (reference project, as D56)
+Origin:      A packet added a member to a set that an earlier packet had asserted
+             was complete. The earlier assertion failed, in a file the new packet
+             had never heard of.
+Question:    How far does a packet's file list reach?
+Options:     (a) The files the change touches.
+             (b) Those, plus every site that asserts over a set the change extends,
+                 found by grepping the workspace for each literal the criteria will
+                 change.
+Disposition: (b), limited to the assertion. When a packet extends a closed set a
+             prior packet asserted exhaustively, that prior packet's assertion
+             sites are in scope by default, for the assertion only.
+Reasoning:   An exhaustive assertion is a promise about the whole set, so adding to
+             the set breaks it by construction. The sweep is mechanical and cheap;
+             discovering it from a red gate costs a cycle, and discovering it after
+             merge costs trust in the suite.
+
+---
+
+### GAL-D26: The product is held to the standards of the category it claims
+Date:        2026-10-27
+Decider:     Operator (reference project, as D61)
+Origin:      Decisions were being made against what the current single-tenant
+             deployment needed, while the product was described as a competitor to
+             an enterprise platform.
+Question:    What standard does a decision get judged against?
+Options:     (a) What the present deployment requires.
+             (b) What a shipped product in the claimed category would require.
+Disposition: (b). A known gap may ship only when the decision names the gap, names
+             its closure path, and names the deploy gate that blocks the unsafe
+             shape until it closes. "Good enough for the current deployment" is
+             never accepted without those three.
+Reasoning:   The bar is what stops a series of locally reasonable choices from
+             compounding into a product that cannot be sold. It sits beside the
+             hard invariants and never replaces them: where the bar and a
+             convenience conflict the bar wins, and where the bar and an invariant
+             conflict the work stops for a recorded decision. Making it operational
+             matters more than stating it, so it appears in three places: a section
+             in the packet template, a one-line verdict in every review, and a
+             provisioning rule that refuses to cut a packet whose section is
+             unfilled.
+
+---
+
+### GAL-D27: A standing delegation may move rulings to the supervisor, within four limits
+Date:        2026-10-27
+Decider:     Operator (reference project, as D64)
+Origin:      The loop idled for want of authority. Work that was ready to cut
+             waited on a human to rule a question the record could already settle.
+Question:    May the supervisor rule, and if so with what limits?
+Options:     (a) No. The operator rules everything, and the loop idles.
+             (b) A time-boxed grant, renewed by hand.
+             (c) A standing grant with explicit limits and a reversal path.
+Disposition: (c), with four limits that the grant does not loosen. (1) Hard
+             invariants are not negotiable; a plan needing one traded is refused,
+             not ratified. (2) AN UNATTENDED RUN NEVER RATIFIES. (3) The operator
+             keeps the physical acts: credentials, permission settings, deploy
+             windows, anything reaching production. (4) Rulings that land code are
+             flagged as expensive to reverse, so review stays possible.
+Reasoning:   Limit (2) is the load-bearing one and it is a security property, not
+             an etiquette. An unattended supervisor run reads agent output, logs
+             and receipts. If such a run could ratify, any text an agent emitted
+             could manufacture a decision, which inverts the authority hierarchy
+             this method is built on. Ratification therefore stays with runs whose
+             inputs are human-authored artifacts: the ledger, the decision queue,
+             the status file and the streams. This amends the format rule that a
+             decider is always a person: under a standing delegation the decider
+             field names the delegation and the supervisor acting under it, and the
+             operator's reversal right is what keeps it accountable.
+
+---
+
+### GAL-D28: One unmerged ledger carriage at a time
+Date:        2026-10-27
+Decider:     Supervisor under the standing delegation (reference project, as D67)
+Origin:      Two branches both appended to the end of the ledger. The second
+             conflicted with the first the moment either landed, and a run had to
+             stop and park rather than resolve it.
+Question:    How many unmerged branches may carry ledger appends?
+Options:     (a) As many as rulings require.
+             (b) Exactly one.
+Disposition: (b). A ruling made while one is outstanding is appended to that same
+             branch. When main has moved under an outstanding carriage, the
+             attended supervisor re-cuts it from current main and re-applies its
+             appends; the cursor records the base it was cut from.
+Reasoning:   Two append-only writers at the end of one file conflict
+             deterministically, so this is arithmetic rather than bad luck. A run
+             still never resolves a carriage conflict, which is unchanged and
+             correct; this removes the situation that produces one.
+
+---
+
+### GAL-D29: Boot time is the liveness oracle
+Date:        2026-10-27
+Decider:     Supervisor under the standing delegation (reference project, as D79)
+Origin:      A job record reported itself running for seven days, across a reboot,
+             with empty logs and a worktree that no longer existed.
+Question:    When may a run conclude that a non-terminal job is dead?
+Options:     (a) Only on a terminal status, parking indefinitely otherwise.
+             (b) Also when the job started before the operating system's last boot.
+Disposition: (b). A job whose start time precedes the current boot is DEAD,
+             whatever its record says, and may be treated as terminal with no
+             further evidence and recorded as dead-by-boot.
+Reasoning:   No process survives a reboot, so this is proof rather than inference,
+             and it involves no pid, so GAL-D09's prohibition on pid polling is
+             untouched. The existing timeout rule can only ever park, because
+             silence is not death. This adds a conclusion where one is available
+             and takes none away: a non-terminal job started after the last boot
+             stays indeterminate.
+
+---
+
+### GAL-D30: The status plane shows no figure it did not compute that run
+Date:        2026-10-27
+Decider:     Supervisor under the standing delegation (reference project, as D66)
+Origin:      The status page republished a block of hand-maintained values under a
+             fresh timestamp for days. One of them described a property as healthy
+             while a confirmed breach of it sat in the decision queue.
+Question:    What may the generated page display?
+Options:     (a) Computed figures plus a maintained block that changes rarely.
+             (b) Only what the snapshot computed for the run that publishes it.
+Disposition: (b). A value that cannot be recomputed is labelled with the date it
+             was asserted, excluded from every count and risk derived from it, or
+             omitted. The validator fails the run when a rendered field has no
+             computed source, and a failed validation publishes nothing.
+Reasoning:   This extends GAL-D17 from where the numbers come from to what the page
+             may show. A stale figure under a fresh timestamp is worse than no
+             figure, because the timestamp is the reader's evidence of freshness.
+             The same run also showed a counter including entries its own text
+             marked resolved, which inflated both a count and the risk derived from
+             it: a figure can be computed every run and still be wrong, so the rule
+             is about provenance and the review is about correctness.
+
+---
+
+### GAL-D31: Dispatch cost is proportional to available work, and the gatekeeper fails open
+Date:        2026-10-27
+Decider:     Operator (reference project, direction) and supervisor (design)
+Origin:      Budget exhaustion stopped the loop twice. The supervisor is the most
+             expensive scheduled item, it loads its full protocol before it reads
+             any state, and an idle run costs very nearly what a working run costs.
+             Two consecutive runs did exactly that against an empty queue.
+Question:    How does the loop stop paying supervisor prices for idle hours?
+Options:     (a) Run the supervisor less often, which also slows real work.
+             (b) Downgrade the supervisor's model, which is where review judgment
+                 lives.
+             (c) A cheap gatekeeper that reads only the cursor and wakes the
+                 supervisor when there is work.
+Disposition: (c). The gatekeeper runs on the cheapest adequate model, reads the
+             cursor and the lock, and fires the supervisor unless the cursor
+             explicitly declares the queue empty. The supervisor keeps a sparse
+             self-schedule as a floor, so a dead gatekeeper cannot silence the loop
+             for longer than that interval.
+Reasoning:   The gatekeeper FAILS OPEN, and that is the whole safety argument: if
+             anything is unreachable, unparseable, ambiguous or merely surprising,
+             it fires. A wrong fire costs one supervisor run. A wrong silence stops
+             the loop, which this method has already paid for in days. (b) is
+             rejected because the expensive judgment is exactly the part worth
+             paying for: in the reference project the supervisor's probe found a
+             real cross-tenant defect and, separately, caught a dependency trap
+             before dispatch that would have cost a full cycle. Cheapening the
+             reviewer to save on review is the wrong direction. Note that the
+             gatekeeper becomes the thing that must run hourly, so the watchdogs
+             must watch it rather than the supervisor once the supervisor leaves
+             its dense schedule.
+
+---
+
 ---
 
 ## Adopting this ledger

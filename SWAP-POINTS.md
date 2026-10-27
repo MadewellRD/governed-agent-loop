@@ -237,6 +237,38 @@ each run scatters the history across artifacts; the task republishes one URL.
 
 ---
 
+## 10. Model tier per role
+
+The loop runs several scheduled roles and they do not need the same capability.
+Getting this wrong in either direction is expensive, so it is a swap point rather
+than a default.
+
+What the reference project settled on, and why:
+
+- **Supervisor: the strongest model available.** It reviews returned code
+  invariants-first, probes the tree before cutting scope, and makes the merge
+  decision. This is the judgment the method depends on. Its probes have caught a
+  genuine security defect and a dependency trap that would each have cost more
+  than the model difference.
+- **Decision session: strong.** It rules architecture under the standing
+  delegation, and a bad ruling compounds because later packets are cut from it.
+- **Gatekeeper and watchdogs: the cheapest adequate model.** They read a few
+  fields and compare values. There is no judgment to buy.
+- **Status task: cheap.** Every figure comes from a deterministic script and the
+  validator fails closed, so the model orchestrates and writes a short narrative.
+- **Coding agents: mid-tier.** The supervisor has already done the probing,
+  scoping, file lists and acceptance criteria. The agent executes a tightly
+  specified packet, which is a different and lesser task than writing one.
+
+The trap to avoid is uniform downgrading when the bill arrives. The cost is
+dominated by how often the expensive role runs, not by its tier, so the lever is
+cadence proportional to work (GAL-D31) and not the model list. See METHOD section
+15.
+
+One substrate note: on some platforms a scheduled task bound to a specific machine
+cannot have its model changed through the API and must be edited by hand in the
+host application. Check this before planning a tier change you cannot execute.
+
 ## Things that are not swap points
 
 - The eleven rules in `README.md`.

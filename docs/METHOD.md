@@ -436,3 +436,71 @@ date.
 The task itself is mechanical, which is the point. It runs two scripts, writes
 three sentences that the page labels as prose, and publishes. It is read-only on
 the repository and never takes the lock. Rule 10 puts it on the cheapest model.
+
+## 14. Delegation and its limits
+
+The method starts with the operator ruling everything, and that is the right place
+to start. It does not scale. A loop that can cut, gate and merge work autonomously
+will idle for want of a ruling long before it idles for want of work, and every
+hour it waits is an hour the human is the bottleneck on a system built to remove
+bottlenecks.
+
+So a standing delegation is the natural end state, and GAL-D27 gives its shape. The
+limits matter more than the grant. Three of them are judgment calls about scope:
+invariants are not negotiable, the physical acts stay with the human, and rulings
+that land code are flagged as expensive to reverse.
+
+The fourth is different in kind and is the one not to lose. An unattended run never
+ratifies. This is a security property. An unattended run reads agent output, logs,
+receipts and tickets. If such a run could ratify a decision, any text an agent
+emitted could manufacture one, and the authority hierarchy in section 2 inverts
+quietly. Ratification stays with runs whose inputs are human-authored: the ledger,
+the decision queue, the status file, the streams.
+
+That distinction is what makes a separate decision session the right shape rather
+than simply letting the dispatcher rule. The dispatcher's whole job is processing
+what agents returned. The decision session reads only what people wrote. Same
+authority, different input surface, and the difference is the point.
+
+A delegation also needs a reversal path that is real. Every ruling records the
+decider, the clock read from the machine, the options rejected and why. The human
+can reverse any of them. In practice reversal gets expensive fast once code lands
+under a ruling, which is why the fourth limit asks for that to be flagged rather
+than discovered.
+
+## 15. Cost as a design constraint
+
+Most of this document is about correctness. This section is about the thing that
+actually stopped the reference loop twice, which was neither a defect nor a bad
+decision but running out of budget.
+
+Three properties made it worse than it needed to be.
+
+The dispatcher loads its full protocol before it reads any state, so it cannot
+discover cheaply that there is nothing to do. An idle run costs very nearly what a
+working run costs.
+
+Nothing in the loop could see its own consumption. There is no feedback from spend
+back into cadence, so the loop runs at the same rate whether the queue is deep or
+empty, until something external stops it.
+
+And the instinct when the bill arrives is to cheapen the expensive component. The
+expensive component is the supervisor, and the supervisor is where review judgment
+lives. In the reference project its probes found a real cross-tenant defect in
+production routes and, separately, caught a dependency trap before dispatch that
+would otherwise have cost a full cycle. Downgrading the reviewer to save on review
+is a false economy that is only visible later, as a defect that shipped.
+
+The shape that works is in GAL-D31: keep the expensive component expensive, and
+stop waking it for nothing. A cheap gatekeeper reads the cursor and the lock and
+decides whether the supervisor is needed this hour. It fails open, because a wrong
+fire costs one run and a wrong silence costs days.
+
+Two consequences are easy to miss. The gatekeeper becomes the component that must
+run on schedule, so the watchdogs have to watch it rather than the supervisor. And
+the supervisor should keep a sparse self-schedule underneath the gatekeeper, so
+that a gatekeeper failure degrades the loop to slow rather than to silent.
+
+The general principle: in a loop where the human is deliberately not in the path,
+the budget is the only remaining hard limit, and anything that is not proportional
+to work done will eventually consume it.
