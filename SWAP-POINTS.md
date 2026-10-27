@@ -117,6 +117,16 @@ stalls.
   pass PowerShell's `-File` and invokes the gate as `-NoProfile -Command ./gate.ps1`.
 - Repositories owned by a different user trip git's ownership check. Pass
   `-c safe.directory=<path>` per invocation rather than editing global config.
+- A push that works in your terminal proves nothing about the unattended path.
+  Your shell has a credential helper; the service account does not, and a governed
+  publish call that takes a credential reference will default to sending none. The
+  symptom is `could not read Username for 'https://...': terminal prompts disabled`,
+  which reads like a configuration fault and is actually an unauthenticated call.
+  Bind the credential by reference on every publish, and resolve each remote its own
+  scoped credential rather than assuming one token covers every repository the loop
+  touches. Diagnose this before concluding a token lacks permission: an unrelated
+  403 on the same remote sent the reference implementation after a non-existent
+  token-scope problem for a day.
 
 ---
 
