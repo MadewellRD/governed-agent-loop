@@ -73,3 +73,26 @@ the entire job. The operator decides what to do.
 Say in any alert that you are the off-device layer and that nothing watches you
 in turn, so a failure of this task itself goes unnoticed by design. That regress
 stops here deliberately.
+
+---
+
+## AMENDMENT (GAL-D31): watch the component that runs hourly
+
+This section has precedence over any statement above that the supervisor is the
+only dispatcher or the only thing that must run on schedule.
+
+If a gatekeeper task (`{{GATEKEEPER_TASK_NAME}}`) exists, the loop's hourly
+component is the GATEKEEPER, and the supervisor runs on a sparse backstop
+schedule and is fired on demand. In that configuration:
+
+- Apply the staleness test to the GATEKEEPER's last run, not the supervisor's.
+  A quiet supervisor is expected and is not evidence of a stall.
+- Alert if the gatekeeper is disabled, suspended, ended, its last run did not
+  succeed, or it has not run within its own staleness window.
+- Still check the supervisor, but judge it against its backstop interval rather
+  than against an hourly expectation.
+- Alert if the gatekeeper has fired and the supervisor has not run since, which
+  is the signature of a fire call being refused.
+
+If no gatekeeper task exists, ignore this section entirely and apply the
+original rules above unchanged.

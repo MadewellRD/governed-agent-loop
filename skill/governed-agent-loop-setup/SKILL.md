@@ -70,9 +70,22 @@ portable. For each, the token names you will resolve are listed.
    to name it; do not pick), which tool allowlist, which credential reference,
    what timeout. The grant must cover the gate command or the agent cannot
    self-gate (rule nine).
-6. **Scheduler** (`{{TICK_TASK_NAME}}`, `{{DEVICE_WATCHDOG_TASK_NAME}}`).
-   Default: Claude scheduled tasks, tick hourly, digest daily, device watchdog
-   every 4h, cloud watchdog every 6h. Confirm cadences and the user's time zone.
+6. **Scheduler** (`{{TICK_TASK_NAME}}`, `{{GATEKEEPER_TASK_NAME}}`,
+   `{{DEVICE_WATCHDOG_TASK_NAME}}`, `{{STATUS_TASK_NAME}}`,
+   `{{TICK_BACKSTOP_CRON}}`). Default: Claude scheduled tasks, gatekeeper
+   hourly, supervisor fired by the gatekeeper with a sparse self-schedule as a
+   backstop (`0 */6 * * *`), decision session every 4h, device watchdog every
+   4h, cloud watchdog every 6h, status every 2h. Confirm cadences and the
+   user's time zone. Offset the gatekeeper a few minutes ahead of the
+   supervisor's backstop so the two do not collide on the same minute.
+
+   Also collect a MODEL TIER for each of the six tasks (swap point 10). Ask the
+   user to name each model; never pick one. The reference assignment, with
+   reasons, is in `SWAP-POINTS.md`: strongest for the supervisor and the
+   decision session, cheapest adequate for the gatekeeper and both watchdogs,
+   cheap for status. A device-bound task carries its model in a signed session
+   request and cannot be changed through the API afterwards, so this is a
+   create-time decision, not a tuning knob.
 7. **Exclusive resources** (`{{SP:7:EXCLUSIVE_RESOURCES}}`). What does the
    gate need exactly one of (a database, a port, a container daemon)? Each one
    becomes a fail-closed precondition in SWAP 7 and a reason the tick runs one
@@ -135,29 +148,70 @@ It is idempotent. Read its output. It must end with `all loop paths present`,
 placeholders, go back to step 2. If it fails a precondition, report the exact
 line and stop.
 
-## Step 4: the four scheduled tasks
+## Step 4: the six scheduled tasks
 
 Create them with the scheduled-task tools (never a local cron). Each prompt is
-the corresponding resolved file from `prompts/`. The tick and device watchdog
-require the user's computer; the digest requires it too in the reference (it
-reads the repo); the cloud watchdog does not and must not (its value is that it
-runs when the computer is asleep).
+the corresponding resolved file from `prompts/`. Only the cloud watchdog must
+NOT require the computer: its entire value is that it still runs when the
+machine is asleep. Everything else reads the repository and needs it.
 
-| Task | Cadence | Requires computer | Prompt |
-|---|---|---|---|
-| `{{TICK_TASK_NAME}}` | hourly, off the hour | yes | `tick.prompt.md` |
-| digest | daily, user's evening | yes | `digest.prompt.md` |
-| `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | `watchdog-device.prompt.md` |
-| cloud watchdog | every 6h | no | `watchdog-cloud.prompt.md` |
-| status task | every 2h, after the tick | yes | `status.prompt.md` (after the status plane is seeded: `plan.json` from the project's registry, the page published once by hand, its URL in the prompt) |
+| Task | Cadence | Computer | Tier | Prompt |
+|---|---|---|---|---|
+| `{{GATEKEEPER_TASK_NAME}}` | hourly | yes | cheapest adequate | `gatekeeper.prompt.md` |
+| `{{TICK_TASK_NAME}}` | `{{TICK_BACKSTOP_CRON}}` (see below) | yes | strongest | `tick.prompt.md` |
+| decision session | every 4h | yes | strong | `digest.prompt.md` |
+| `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | cheapest adequate | `watchdog-device.prompt.md` |
+| cloud watchdog | every 6h | **no** | cheapest adequate | `watchdog-cloud.prompt.md` |
+| `{{STATUS_TASK_NAME}}` | every 2h | yes | cheap | `status.prompt.md` |
 
-Model: ask the user to name the model for each. A device-bound task carries its
-model in a signed session request and cannot be changed afterwards through the
-API, so get it right at creation. The reference runs tick and digest on the
-strongest model and watchdogs on the cheapest that can read a run record.
+**Arm in this order, and do not shorten it.** The order exists because the
+supervisor is the only thing that harvests finished work, and an unproven
+gatekeeper in front of it is a single point of failure on the component the
+whole loop depends on.
+
+1. Create the supervisor on an HOURLY schedule, not the backstop. The loop must
+   work without a gatekeeper first.
+2. Create the decision session, both watchdogs and the status task.
+3. Create the gatekeeper. For at least one full cycle, let both it and the
+   hourly supervisor run. They cannot collide: the supervisor's mutex means the
+   second caller loses the compare-and-swap and exits quietly. This costs one
+   extra supervisor run per hour and buys evidence.
+4. Watch for BOTH gatekeeper paths before cutting over. The fire path proves
+   itself immediately, because there is work. The SKIP path only exercises once
+   the queue genuinely empties, and it is the one that can stop the loop. A
+   gatekeeper that has only ever said yes has not demonstrated it can safely say
+   no.
+5. Only then move the supervisor to `{{TICK_BACKSTOP_CRON}}`. That schedule is
+   a floor, not a cadence: it guarantees that a completely dead gatekeeper
+   degrades the loop to slow rather than to silent, and it must be shorter than
+   the device watchdog's staleness threshold so a stall is still caught.
+
+**The watchdogs watch the hourly component.** Before the cutover that is the
+supervisor. After it, it is the GATEKEEPER, because the supervisor is then
+expected to be quiet for hours at a time and its silence is no longer evidence
+of anything. Repoint them in the same change as the cutover. A watchdog left
+pointing at a backstopped supervisor will report a healthy loop while a dead
+gatekeeper quietly starves it, which is the exact failure the watchdog layer
+exists to catch. Both watchdog prompts carry an amendment section for this.
+
+**On the decision session.** The kit ships `digest.prompt.md`, which recommends
+and waits. That is the correct starting shape: a new loop has no track record,
+and a standing delegation is earned rather than granted on day one. Arm it
+daily as a digest. When the operator grants a standing delegation (GAL-D27),
+the same task becomes a decision session that RULES: raise its cadence to every
+4h, and amend its prompt so it writes rulings to the ledger on its own carriage
+instead of producing recommendations. Until that delegation exists in the
+target's own ledger, the task recommends and the loop idles on open questions,
+which is the behaviour that motivated GAL-D27 in the first place.
+
+Model: ask the user to name the model for each; never pick one. A device-bound
+task carries its model in a signed session request and cannot be patched
+through the API afterwards, so get it right at creation. If a tier is wrong
+later, the user changes it by hand in the host application.
 
 After creation, list the tasks and read back each one's cron, requires-device
-flag, and permission mode. Report them in a table. Do not fire the tick.
+flag, model and permission mode. Report them in a table. Do not fire the
+supervisor by hand.
 
 ## Step 5: the first packet
 
@@ -182,7 +236,15 @@ evidence you used:
   equals an independent SHA-256 over the sorted `git ls-files -s` manifest with
   the receipts dir excluded, and whose `binds_commit` is `true`.
 - The cursor validates against `loop-state.schema.json` and is at tick 0.
-- The four tasks exist with the expected cadences and device flags.
+- All six tasks exist with the expected cadences, device flags and models, and
+  the cloud watchdog is the only one that does not require the computer.
+- The supervisor is still on its hourly schedule, not the backstop. The cutover
+  is a later, evidence-gated step and is not part of arming.
+- The gatekeeper's decision logic has been dry-run against the live cursor by
+  hand, and its verdict matches what the cursor says. Record the verdict and the
+  three fields it read.
+- The gatekeeper fires the supervisor by the scheduler's fire action and not by
+  any other route, and its prompt contains the fail-open rule verbatim.
 - The supervisor commit identity differs from the operator's.
 - No `{{` tokens remain outside the permitted set.
 - No credential value appears in any committed file or any task prompt
