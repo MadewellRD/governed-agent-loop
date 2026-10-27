@@ -164,7 +164,7 @@ queue is append-only intake and closure lives only in the ledger.
 | `protocol/packet-TEMPLATE.md` | The unit of work: scope, criteria, invariants, tests, branch. |
 | `protocol/loop-state.schema.json` | The cursor. One mutable record of where the loop is. |
 | `protocol/gate-receipt.schema.json` | The evidence contract, v2 self-attesting. |
-| `prompts/` | Stored prompts for the supervisor, the decision digest and both watchdogs. |
+| `prompts/` | The six stored prompts: gatekeeper, supervisor, decision session, both watchdogs, status. |
 | `scripts/gate.template.ps1` | The gate skeleton. The binding rule is the load-bearing part. |
 | `scripts/setup-loop.template.ps1` | Arming: tool paths, credentials, execution profile, policy. |
 | `scripts/status-snapshot.template.ps1` | The status plane: a deterministic, read-only rendering of the tree into one JSON document, with provenance shas on every section. |
@@ -172,18 +172,22 @@ queue is append-only intake and closure lives only in the ledger.
 | `protocol/plan.schema.json` | The plan of record: every unit of work, its lane and phase, its status, its evidence, its conflicts. Countable, under the gate. |
 | `protocol/status-snapshot.schema.json` | The snapshot contract the page renders and the validator enforces. |
 | `status/build-status.template.html` | The build-status page: fixed renderer over the snapshot, investor first. The status task republishes it with a new snapshot beside it; it never writes HTML. |
-| `prompts/status.prompt.md` | The fifth stored prompt: the status task. || `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the eight swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the four scheduled tasks, verifies. |
+| `prompts/status.prompt.md` | The status task: republishes the build-status page from a fresh validated snapshot. |
+| `prompts/gatekeeper.prompt.md` | The hourly cheap check: reads the cursor and the lock, fires the supervisor when there is work, fails open. |
+| `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the ten swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the six scheduled tasks, verifies. |
 
 ---
 
 ## Quickstart
 
-1. Read `SWAP-POINTS.md` and fill in the eight project-specific values.
+1. Read `SWAP-POINTS.md` and fill in the ten project-specific values.
 2. Copy `protocol/` and `scripts/` into your target repo under `ops/pm/`.
 3. Run the setup script to arm the execution substrate: resolve the agent binary,
    bind the credential, set the execution profile, verify the gate can run
    unattended.
-4. Create the four scheduled tasks from `prompts/`.
+4. Create the six scheduled tasks from `prompts/`, in the order the setup skill
+   gives. The supervisor runs hourly until the gatekeeper has demonstrated both
+   its fire path and its skip path; only then does it move to its backstop.
 5. Write your first packet from the template and let the supervisor dispatch it.
 
 Step 3 is where every first-time setup actually stalls, and `SWAP-POINTS.md` is

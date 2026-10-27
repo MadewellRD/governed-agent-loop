@@ -1,6 +1,6 @@
 ---
 name: governed-agent-loop-setup
-description: Arm a Governed Agent Loop (GAL) in a target repository: ask the eight swap-point questions, parameterize the kit, run setup-loop, create the four scheduled tasks, write the first packet, verify. Use when the user wants an unattended supervisor-plus-coding-agent loop set up for a project, or says "set up the loop", "arm GAL", "governed agent loop for <repo>".
+description: Arm a Governed Agent Loop (GAL) in a target repository: ask the ten swap-point questions, parameterize the kit, run setup-loop, create the six scheduled tasks, write the first packet, verify. Use when the user wants an unattended supervisor-plus-coding-agent loop set up for a project, or says "set up the loop", "arm GAL", "governed agent loop for <repo>".
 ---
 
 # Governed Agent Loop setup
