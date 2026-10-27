@@ -12,7 +12,7 @@ the substrate, not permission to drop the rule.
 
 ---
 
-## The eight values
+## The ten values
 
 Fill these in before you copy anything. Everything else derives from them.
 
@@ -23,10 +23,11 @@ Fill these in before you copy anything. Everything else derives from them.
 | 3 | Receipts directory (the binding exclusion) | `docs/gate-receipts/` |
 | 4 | Execution substrate | nMCP `execute_start` on Windows, service account `NT SERVICE\nMCP` |
 | 5 | Agent invocation and capability grant | `claude -p … --allowedTools Bash(cargo:*) …` |
-| 6 | Scheduler | Claude scheduled tasks, hourly supervisor |
+| 6 | Scheduler | Claude scheduled tasks, hourly gatekeeper, supervisor fired on demand with a sparse backstop |
 | 7 | Exclusive resources the gate needs | one Postgres instance via `TEST_DATABASE_URL` |
 | 8 | Decision ledger path | `docs/DECISIONS.md`, append only, gated |
 | 9 | Registry file and status publish target | `docs/engineering-spec/tracker.json` seeds the plan of record; the page publishes as a claude.ai artifact the status task republishes |
+| 10 | Model tier per role | strongest for the supervisor and decision session, cheapest adequate for gatekeeper and watchdogs, cheap for status, mid-tier for coding agents |
 
 ---
 
@@ -156,15 +157,29 @@ Whatever fires the supervisor on a cadence. Four things it must give you:
 4. Notification on a run that reports something.
 
 **Cadence.** Hourly suits a loop where packets take fifteen to thirty minutes and
-gates take fifteen to twenty-five. Most ticks are quiet and cheap. Slowing the
-cadence to save budget mostly doubles the window in which finished work sits
-unharvested, which is the expensive thing.
+gates take fifteen to twenty-five. Slowing that cadence to save budget is the wrong
+lever: it doubles the window in which finished work sits unharvested, which is the
+expensive thing, and it buys the saving precisely on the ticks that had work to do.
+
+What is true is that most ticks are quiet, and a quiet tick on the strongest
+available model is the loop's largest recurring cost. The answer is to keep the
+hourly cadence and make the hourly thing cheap: a gatekeeper on the cheapest
+adequate tier reads the cursor and the lock, fires the supervisor when there is
+work, and exits otherwise (GAL-D31). The supervisor keeps a sparse self-schedule as
+a backstop so a dead gatekeeper degrades the loop to slow rather than to silent.
+
+**Do not arm that shape first.** The gatekeeper's fire path proves itself the moment
+there is work. Its SKIP path only exercises once the queue genuinely empties, and
+that is the path that can stop the loop. Run the supervisor hourly alongside the
+gatekeeper until you have observed both, then move the supervisor to its backstop.
+The mutex makes the overlap safe: the second caller loses the compare-and-swap and
+exits.
 
 **The failure to design against.** The reference scheduler auto-disables a
 device-bound task when its machine is unreachable at a firing. A laptop asleep at
 the wrong minute permanently stopped the only dispatcher, twice, silently. Whatever
 your scheduler does in that situation, find out before you depend on it, and build
-the watchdog layer in section 9 regardless.
+the watchdog layer below regardless.
 
 ---
 
@@ -197,12 +212,18 @@ that gets rewritten is not one.
 
 ## The watchdog layer
 
-Not one of the eight, because it is not optional and it is not a parameter.
+Not one of the ten, because it is not optional and it is not a parameter.
 
 The supervisor is the only dispatcher, so when it stops, everything stops. It
 cannot detect its own absence. You need at least one observer that is not the
 supervisor, and at least one of those observers must not depend on the same machine
 the supervisor depends on, or you have simply duplicated the failure.
+
+**Watch whatever runs hourly.** With a gatekeeper in front (section 6), that is the
+gatekeeper, and the supervisor's silence between fires is expected rather than
+diagnostic. Repoint the watchdogs in the same change that backstops the supervisor.
+A watchdog still aimed at a backstopped supervisor reports a healthy loop while a
+dead gatekeeper starves it, which is the exact failure the layer exists to catch.
 
 The reference runs two: a device-bound one that reads the cursor and alerts on a
 stale timestamp, and a cloud-only one that reads the scheduler's own run records and
