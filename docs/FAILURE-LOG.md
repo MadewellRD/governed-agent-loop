@@ -495,6 +495,200 @@ than quietly corrected because the rule's author violating it is the strongest
 available evidence that the rule is necessary and that seniority does not exempt
 anyone from it.
 
+---
+
+### LOOP-20. Three rulings stranded on carriage branches in one day, 2026-10-27
+
+**Observed.** A decision session ruled three units dispatchable and cut the
+ledger text onto a short-lived carriage branch. Ticks read the ledger on main, as
+the split bus requires, so the next two ticks saw no ruling, wrote `queued:
+EMPTY`, and one sent the operator an idle notification on a blocker that was not
+real. The same shape recurred at 16:39Z with the ruling that made the next
+packet dispatchable, and at 20:34Z with the ruling that introduced the probe
+meant to prevent stranding, which was itself stranded. In the first two cases
+the loop held ratified, dispatchable work and reported itself idle.
+
+**Root cause.** GAL-D03 says an append rides the next packet branch and GAL-D28
+says one carriage at a time. Between them there was no rule for a carriage when
+the queue empties, so the carriage could only grow, and no run was obliged to
+look for one before declaring the queue empty.
+
+**Produced.** GAL-D32. Every run probes for an outstanding carriage by content,
+a tip not an ancestor of main whose ledger diff adds a heading main lacks, before
+it may write an empty or blocked determination, and the run that finds one lands
+it under the independent gate when no packet branch will. The deciding session
+never lands its own. The third stranding was the one that proved the rule had to
+live in the protocol a tick executes, not only in a ledger entry a tick may not
+read for that purpose.
+
+---
+
+### LOOP-21. Device absence disabled every device-bound task in eleven minutes, 2026-10-28
+
+**Observed.** Between 00:18Z and 00:29Z the operator's computer was unreachable.
+The scheduler auto-disabled the gatekeeper at its 00:18 firing, the supervisor
+at 00:24:01 after a clean 23:23 run, and the decision session at 00:29:43, each
+with `suspension_reason: device_absent`. The loop had no dispatcher for an hour.
+A cloud-only watch created at 22:15Z the evening before ran throughout and is
+what caught it. Told that something was broken, the attended supervisor probed
+the tree four times, found it healthy, and missed the outage, because a disabled
+scheduled task leaves no trace in the tree or the cursor. Re-enabling the
+supervisor was refused to the automated session by the permission classifier;
+the operator did it by hand before the 01:23 firing.
+
+**Root cause.** Every trigger of the supervisor was bound to the machine. The
+watchdog layer had been built to shorten this outage, and it did, to an hour;
+nothing had been built to prevent it, because the kit treated auto-disable as a
+scheduler quirk to watch for rather than as a binding to remove. LOOP-18 records
+a run that wrongly reported this incident "firing a third time"; this entry is
+the third time, and the difference is that this one has the scheduler's record.
+
+**Produced.** GAL-D33: no trigger of the supervisor is device-bound where the
+substrate can be reached from the cloud, and a component a closed laptop can
+switch off is never the loop's only trigger. GAL-D35: the cutover to a sparse
+supervisor is blocked while the gatekeeper can be disabled by device absence.
+And the diagnostic rule in the watchdog layer: scheduler health is the one check
+the repository is blind to, and it is checked first because it is the only check
+that still works when the machine is unreachable.
+
+---
+
+### LOOP-22. The gatekeeper keyed on a state name, then on a stale field, 2026-10-27 and 2026-10-28
+
+**Observed.** The gatekeeper's skip rule matched the literal string `idle`. D97
+introduced `idle-blocked` the same day, so a loop that was provably unable to
+dispatch fired the expensive supervisor every hour, the inverse of the
+gatekeeper's purpose. After the prompt was corrected to read the cursor's
+`queued` determination, the gatekeeper fired again at 01:18:48Z on a blocked
+loop, correctly under its own first rule, because the cursor's top-level
+`job_id` still named a job harvested two ticks earlier. Cost: two supervisor
+sessions an hour instead of zero or one, for as long as the loop stayed blocked.
+
+**Root cause.** A cheap reader was keyed on fields that can go stale (a state
+name the ledger can extend; a job id a parked run did not clear) instead of on
+the one field the supervisor writes fresh every run as its determination. The
+cursor is a shared bus with more than one reader, and the supervisor's
+obligation to keep it truthful had been written for its own successor only.
+
+**Produced.** GAL-D34. The gatekeeper skips only on the cursor's freshly written
+determination that nothing is dispatchable, in either of its shapes, and fires
+on anything else; the state name is never consulted. A run that ends with
+nothing in flight clears `job_id`, `dispatched_at` and all in-flight language in
+the same write that records its result. The severity was also corrected in the
+same session: while the supervisor keeps its own schedule a wrong fire costs one
+short session that loses the mutex, not a full tick; the attended supervisor had
+overstated it to the operator before checking.
+
+---
+
+### LOOP-23. A gatekeeper without automatic approval, 2026-10-27
+
+**Observed.** The gatekeeper was created at 01:11Z on 2026-10-27 without
+automatic approval and ran a full day that way. Every firing that needed a tool
+call waited on a human who was often asleep. Nothing alerted, because the
+supervisor's own hourly schedule kept the loop moving and the gatekeeper's
+silence looked like a skip.
+
+**Root cause.** The arming rule gated the cutover on the skip path being
+observed and said nothing about approval, and the only place approval is
+visible is the scheduler's task record, which no verification step read back
+for this task.
+
+**Produced.** GAL-D35. Automatic approval is an arming precondition for the
+gatekeeper, read back from the scheduler's record, and the cutover to a sparse
+supervisor is conditional on it alongside the skip-path evidence and the absence
+of a device binding. A gatekeeper that needs approval is decorative: it fires
+when someone is awake, which is when the loop needs it least.
+
+---
+
+### LOOP-24. A discriminator that discriminated nothing, 2026-10-27
+
+**Observed.** A red gate failed one assertion by exactly ten units. Two
+explanations were on the table: a shared per-day counter moved by a sibling test
+in the same binary, or a cross-tenant billing attribution defect of the kind the
+product's invariants exist to prevent. The tick re-ran the failing test alone,
+single-threaded, in a throwaway database. It passed. The tick correctly refused
+to classify, because a pass under enforced isolation is what both explanations
+predict. Careful, and it answered nothing.
+
+**Root cause.** The experiment was chosen because it was the natural one, not
+because its outcomes differed between the candidates. The question that resolved
+it in two greps against main was "who else writes to the thing this assertion
+reads": a sibling test seeds exactly ten units to the same tenant. The isolated
+run then mattered for a different reason than the one it was run for: its first
+two assertions passing is what ruled out misattribution, not the pass itself.
+
+**Produced.** A review rule in METHOD section 7: a discriminator must
+distinguish the candidates, and an experiment both hypotheses predict is not
+one. Before running the natural experiment, state what each candidate predicts
+for it; if the predictions agree, choose another.
+
+---
+
+### LOOP-25. A parked run left its successor a stale instruction, 2026-10-27
+
+**Observed.** A tick parked on a failed gate. It wrote its state and its gate
+result correctly, and left `queued` and the next-action field describing a
+packet as dispatched that had merged two ticks earlier. The next reader was
+handed an instruction about work that no longer existed. The attended session
+corrected the text by hand that evening, and the same partial-write pattern
+produced LOOP-22's second wrong fire the next morning.
+
+**Root cause.** Step 9 named the fields a run writes at release and did not
+oblige a run to rewrite the fields that describe what comes next. A run that
+ends early writes what it did and inherits what it found.
+
+**Produced.** GAL-D34's second half, carried into step 9a: a run that ends with
+no job in flight clears the in-flight fields and rewrites `queued` and any
+next-action field to describe the situation it is leaving. A partial cursor
+write is a defect of the run that made it.
+
+---
+
+### LOOP-26. An intake repeated to the operator without a probe, 2026-10-27
+
+**Observed.** A filed intake's remainder claimed that four deploy gates appeared
+in no runbook. The attended supervisor repeated that claim to the operator and
+then probed: the runbook on main carried all four in full, only a fifth was
+absent, and a ruling already assigned it to a packet. The supervisor corrected
+itself in the same session.
+
+**Root cause.** GAL-D22 required a probe for facts about the tree, and the
+supervisor had been probing file lists and constructs as it required. The intake
+was a claim about the tree too, filed by an earlier run against an older main,
+and nothing said to probe it.
+
+**Produced.** GAL-D37. The probe-before-ruling rule covers intakes, prior
+findings and parked items at the moment a ruling cites them or a report repeats
+them. A filed intake is memory with a heading, and GAL-D22 already says why
+memory is the worst source.
+
+---
+
+### DEFECT-7. Production could not take a migration and could not say its schema version, 2026-10-28
+
+**Observed.** A deploy window was scoped to apply the pending migration chain.
+The probe at ruling time found that the only migration path reaching production
+was the database image's first-boot initialisation, which runs once on an empty
+volume and never again; that the production binary's migration embed had been
+correctly gated out behind a build feature; and that no script, container or
+command anywhere in the tree applied a migration to an existing database.
+Production read 0048 applied, three later migrations not, and no bookkeeping
+table of any kind. The window was withdrawn.
+
+**Root cause.** Three decisions, each correct on its own terms: the production
+binary never embeds migrations, the check command never opens a connection, and
+the compose file mounts the migration directory for first boot only. Nobody
+asked what the system could no longer do once all three held, because no rule
+asked.
+
+**Produced.** GAL-D36. A gate that removes a capability names its replacement,
+or names the gap with its closure path and the deploy gate that blocks the
+unsafe shape, and a probe at ruling time confirms the replacement exists. The
+reference built the replacement as a separate fail-closed binary and ruled, in
+the same entry, that building it grants no authority to run it.
+
 ## Receipt binding: three consecutive packets
 
 The single most repeated finding, and the one that justifies rule 3 on its own.
@@ -607,14 +801,14 @@ Not rules, but every one of these cost a tick.
 
 | Rule | Earned by |
 |---|---|
-| 1. One dispatcher | D17, and both outages for the corollary |
+| 1. One dispatcher | D17, both outages for the corollary, and LOOP-21 for why no trigger is device-bound |
 | 2. Green must name its commit | D22, GATE-1, the three binding failures |
 | 3. Review the delivered tip | the three binding failures, DEFECT-2, DEFECT-3, INV-2 |
 | 4. One in flight | LOOP-8 |
 | 5. Terminal status only | LOOP-5 |
 | 6. A lock must be a lock | LOOP-6 and its timestamp rider, LOOP-15 |
-| 7. Rulings originate in the ledger | LOOP-9, the LOOP-8 provenance incident, LOOP-4 |
+| 7. Rulings originate in the ledger | LOOP-9, the LOOP-8 provenance incident, LOOP-4, and LOOP-20 for a ruling that is not on main |
 | 8. Criteria covered by grant | DEFECT-4 |
 | 9. Nothing waits on a human | D17, the DEC queue, every parked item |
-| 10. Model matches blast radius | LOOP-3, the digest cadence incident |
+| 10. Model matches blast radius | LOOP-3, the digest cadence incident, LOOP-19, LOOP-22 and LOOP-23 for the gatekeeper in front of the expensive role |
 | 11. Instruction files are attended-only | LOOP-13, LOOP-14, and LOOP-9 for why the prompt is not the alternative |
