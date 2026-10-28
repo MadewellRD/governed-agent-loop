@@ -753,6 +753,229 @@ Reasoning:   The gatekeeper FAILS OPEN, and that is the whole safety argument: i
 
 ---
 
+### GAL-D32: An outstanding ledger carriage is work in the queue
+Date:        2026-10-28
+Decider:     Operator (reference project, as D90 and D97, both ruled under the
+             standing delegation)
+Origin:      Three rulings in one day sat on short-lived carriage branches that
+             never reached main. Runs read the ledger on main (GAL-D05), so each
+             was invisible: twice the stranded ruling was the very work the loop
+             then reported itself idle for want of, and the third was the rule
+             that would have caught the first two. GAL-D03 says where an append
+             rides and GAL-D28 says how many carriages may exist; neither says
+             what happens to a carriage with nothing left to ride.
+Question:    What happens to a ledger carriage when the packet queue empties, and
+             when may a run declare the queue empty?
+Options:     (a) Wait for the next packet branch; the carriage rides it whenever
+                 that is.
+             (b) The deciding session gates and merges its own carriage.
+             (c) Every run probes for an outstanding carriage by content before
+                 it may declare the queue empty or blocked, and the run that
+                 finds one lands it as its own gated carriage when no packet
+                 branch will carry it.
+             (d) Accept the exposure.
+Disposition: (c). Outstanding means: a carriage tip that is not an ancestor of
+             main AND whose diff against main on the ledger adds a decision
+             heading main lacks. Ancestry alone is not the test, because
+             superseded branches would report forever. A non-empty probe is work
+             in the queue: the run re-cuts the carriage from current main,
+             verifies that the ledger differs from main by exactly the original's
+             added text, runs the independent gate and fast-forwards. That is
+             landing, not ratifying; the run writes no ruling of its own, and a
+             conflict still stops and parks (GAL-D28). A held idle or blocked
+             determination is re-tested against the same probe at the start of
+             every run. (a) is what stranded three rulings. (b) rejected: a
+             session that both rules and merges puts its rulings on main without
+             the independent gate, which is GAL-D27 limit (2) by another route.
+             (d) failed twice in one day.
+Reasoning:   The ledger on main is the only ledger a run reads, so a ruling
+             anywhere else does not exist to the loop. The probe makes that state
+             loud within one cadence, and the vehicle already existed, because a
+             run can gate and merge a supervisor-surface branch. The rule is
+             written as a probe keyed on content so that litter branches stay
+             quiet and so that the check cannot be satisfied by remembering.
+
+---
+
+### GAL-D33: No trigger of the supervisor depends on the operator's machine being awake
+Date:        2026-10-28
+Decider:     Operator (reference project, attended session 2026-10-28; the
+             standing recommendation recorded in the cursor after the third
+             device-absence outage)
+Origin:      Between 00:18Z and 00:29Z on 2026-10-28 the operator's computer was
+             unreachable and the scheduler auto-disabled every task that required
+             it, each with suspension_reason device_absent: the gatekeeper, the
+             supervisor and the decision session, in eleven minutes. The loop had
+             no dispatcher for an hour. A cloud-only watch created three hours
+             earlier ran throughout. This was the third time device absence had
+             switched off the only dispatcher.
+Question:    Which loop components may be bound to the operator's machine?
+Options:     (a) All of them except the cloud watchdog, with the watchdog layer
+                 to catch the disable.
+             (b) No trigger of the supervisor is device-bound. The gatekeeper,
+                 the supervisor and the decision session run without a device
+                 binding and reach the repository through the execution
+                 substrate; only a component whose job is the machine itself,
+                 the device watchdog, is bound to it.
+             (c) Find a scheduler that does not auto-disable.
+Disposition: (b), wherever the execution substrate is reachable from the cloud,
+             as the reference substrate is. A component that a closed laptop can
+             switch off must never be the loop's only trigger. Where the
+             substrate is a shell on the machine and nothing else, the binding is
+             unavoidable and is recorded as a known weakness with its cost; the
+             cloud watchdog is then the only cover and the sparse-backstop
+             cutover (GAL-D35) is not available.
+Reasoning:   (a) is what the kit carried and it was disproved three times. The
+             watchdog layer shortens an outage; it does not prevent one, and a
+             watchdog that alerts a sleeping operator at midnight has preserved
+             the outage, not the loop. A run that cannot reach the machine ends
+             quietly in one line and costs nothing; a task the scheduler has
+             disabled costs the loop until a human notices. (c) swaps the
+             scheduler, which is a swap point, and still leaves the loop
+             depending on a machine for a job that needs the machine only for a
+             few commands.
+
+---
+
+### GAL-D34: The gatekeeper judges dispatchability from the cursor's determination, and a run that ends with nothing in flight says so in every field
+Date:        2026-10-28
+Decider:     Operator (reference project, gatekeeper corrected in the attended
+             session of 2026-10-28; the obligations DEFECT-31 left open there are
+             ruled here for the kit)
+Origin:      The reference gatekeeper skipped only on the literal state name
+             idle. D97 then introduced idle-blocked, so a loop that was provably
+             unable to dispatch fired the expensive supervisor every hour, the
+             inverse of the gatekeeper's purpose. Separately, a supervisor run
+             that parked on a failed gate left the cursor's top-level job_id
+             naming a job harvested two runs earlier, and the gatekeeper's first
+             rule, a non-null job_id fires, produced the same wrong fire for as
+             long as the loop stayed blocked. The same parked run had left queued
+             and the next-action text describing a packet merged two runs before,
+             handing its successor a stale instruction.
+Question:    What may the gatekeeper key its skip on, and what does a run owe the
+             cursor's other readers when it ends with nothing in flight?
+Options:     (a) Enumerate every state name that means skip, and keep the list
+                 current as the ledger grows.
+             (b) The gatekeeper skips only on the cursor's freshly written
+                 determination that nothing is dispatchable, whatever the state
+                 is called, and fires on anything else; and every run that ends
+                 with no job in flight clears job_id, dispatched_at and all
+                 in-flight language, and rewrites queued and any next-action
+                 field to describe the situation it is leaving, not the one it
+                 found.
+             (c) Invert the gatekeeper's rule order so a blocked determination
+                 outranks a non-null job_id.
+Disposition: (b). The determination has two shapes with one consequence, an
+             empty queue and a blocked queue, and the skip covers both. The
+             job_id rule stays first, because fail-open is the gatekeeper's
+             safety argument and a cursor that lies about in-flight work is the
+             run's defect, not the gatekeeper's. A run that parks writes its
+             state and its gate result and refreshes its successor's
+             instructions in the same write; a partial write is a defect of the
+             run. (a) rejected: the set of state names grows with the ledger and
+             a cheap reader cannot be re-taught every time. (c) rejected: it
+             teaches the gatekeeper to reason about staleness, which is exactly
+             the judgment it was built not to need.
+Reasoning:   The cursor is a shared bus with more than one reader. The supervisor
+             can reason about a stale field; a cheap scheduled task cannot, and
+             it costs money every hour it is misled. Keying the skip on a
+             determination the run re-tests every time (GAL-D32) rather than on
+             a name that can go stale puts the truth-keeping obligation on the
+             one component with the judgment to keep it. The reference saw both
+             halves of this in one day.
+
+---
+
+### GAL-D35: The gatekeeper cutover has three preconditions
+Date:        2026-10-28
+Decider:     Operator (reference project, attended session 2026-10-28; extends
+             the arming rule the kit already carried)
+Origin:      The reference gatekeeper ran for a day without automatic approval,
+             so every firing waited on a human who was often asleep, and nothing
+             noticed because the supervisor's own hourly schedule covered the
+             gap. The next day the gatekeeper was auto-disabled by device absence
+             alongside the supervisor it fronts. Had the supervisor already been
+             on its sparse backstop, either condition would have slowed the loop
+             to the backstop interval with no alert.
+Question:    When may the supervisor leave its hourly schedule for the sparse
+             backstop behind the gatekeeper?
+Options:     (a) When the gatekeeper has fired at least once.
+             (b) When the gatekeeper has demonstrated its skip path on a
+                 genuinely empty or blocked queue, runs with automatic approval,
+                 and carries no device binding the scheduler can disable; all
+                 three read back from the scheduler's own task record, not from
+                 what was asked for.
+Disposition: (b). Until all three hold the supervisor keeps its hourly schedule
+             and the gatekeeper runs beside it; the mutex makes the overlap safe.
+             A gatekeeper that needs approval is decorative: it fires when
+             someone is awake. A gatekeeper the scheduler can switch off is a
+             single point of failure in front of the component the loop depends
+             on.
+Reasoning:   The skip path is the one that can stop the loop, so it has to be
+             observed; the kit already said so. Approval and device binding are
+             the two ways a correct gatekeeper still fails to fire, and both are
+             invisible from the tree, which is why the evidence is the
+             scheduler's record and why the arming step reads it back.
+
+---
+
+### GAL-D36: A gate that removes a capability names its replacement
+Date:        2026-10-28
+Decider:     Operator (reference project, as D98, attended)
+Origin:      The reference correctly gated its migration embed out of the
+             production binary, and nothing replaced the production migration
+             path. Three decisions that were each right met at a point nobody
+             stood on: a production database that could not take a migration and
+             could not state its own schema version, discovered when a deploy
+             window was scoped to apply migrations that had no mechanism to run.
+Question:    What does a build-integrity decision owe when it subtracts something
+             the system used to be able to do?
+Options:     (a) Nothing beyond the gate; the subtraction is the point.
+             (b) The decision names what now performs the removed capability, or
+                 names the gap, its closure path and the deploy gate that blocks
+                 the unsafe shape until it closes (the GAL-D26 three), and a
+                 probe at ruling time confirms the replacement exists.
+Disposition: (b). A gate that subtracts is ratified only with its replacement or
+             its named gap. Building the replacement does not grant the authority
+             to run it: the capability and its trigger are separate decisions.
+Reasoning:   Each of the three decisions was reviewed on its own terms and
+             passed. None was asked what the system could no longer do once all
+             three held, because no rule asked. The question is cheap at ruling
+             time and expensive at deploy time, and the GAL-D26 three were
+             already the form for a named gap; this makes them owed by
+             subtractions as well as by shortfalls.
+
+---
+
+### GAL-D37: The probe at ruling time covers intakes and prior findings
+Date:        2026-10-28
+Decider:     Operator (reference project, attended session 2026-10-27, where the
+             error was made and corrected)
+Origin:      The reference supervisor repeated a filed intake's claim to the
+             operator, that four deploy gates were in no runbook, without
+             checking it. The gap had been closed on main: only one gate was
+             absent and a ruling already assigned it. GAL-D22 required a probe
+             for facts about the tree, and the supervisor had probed the file
+             list; it had not probed the claim.
+Question:    What does the probe-before-ruling rule cover?
+Options:     (a) File lists, paths and constructs: the tree facts GAL-D22 names.
+             (b) Those, plus every intake, prior finding and parked item that a
+                 ruling or a report relies on, re-read against current main at
+                 the moment of use.
+Disposition: (b). An intake is a claim about the tree made at the time it was
+             filed, by a run that may have been wrong, about a tree that has
+             since moved. Before a ruling cites one or a report repeats one, the
+             run re-tests the claim and says whether it still holds. A
+             contradiction between the intake and the probe is recorded as a
+             defect of the intake.
+Reasoning:   GAL-D22's own reasoning says memory is worse than agent prose
+             because it was true once. A filed intake is memory with a heading.
+             The probe costs seconds; the miss cost a false report to the
+             operator and, had it been ruled on, a packet cut to close a gap that
+             was already closed.
+
+---
+
 ## Adopting this ledger
 
 Copy this file to `docs/DECISIONS.md` in the target repository. Keep the format
