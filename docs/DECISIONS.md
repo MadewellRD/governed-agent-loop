@@ -7,7 +7,7 @@ they can be adopted as-is or amended with a dated entry.
 
 The entries below are numbered `GAL-D01` onward. A project adopting this method
 keeps its own ledger with its own numbering and references these by id. The
-reference implementation's own ids (D17 through D26) are noted so the evidence in
+reference implementation's own ids (D17 through D98) are noted so the evidence in
 `FAILURE-LOG.md` can be traced.
 
 ---
@@ -72,6 +72,8 @@ Date:        2026-10-15
 Decider:     Operator (reference: D19, from LOOP-1)
 Origin:      Whether the loop's own bookkeeping commits could reach main without
              a gate run, since they touch no production code.
+Question:    May a commit that touches only loop bookkeeping reach main without
+             a gate run?
 Options:     (a) Exempt bookkeeping-only commits from the gate.
              (b) No exception; every commit reaching main carries or rides a
                  receipt.
@@ -748,8 +750,6 @@ Reasoning:   The gatekeeper FAILS OPEN, and that is the whole safety argument: i
              gatekeeper becomes the thing that must run hourly, so the watchdogs
              must watch it rather than the supervisor once the supervisor leaves
              its dense schedule.
-
----
 
 ---
 

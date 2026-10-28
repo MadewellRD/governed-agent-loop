@@ -29,7 +29,7 @@ the protocol file ever CONTRADICTS one of these rules, that is a halt condition:
 stop, park the contradiction as an entry in {{SP:8:DEC_QUEUE_PATH}}, and end the
 tick. Do not proceed on either reading.
 
-CONCURRENCY, FIRST AND NON-NEGOTIABLE (GAL-D06 mutex). Before anything else,
+CONCURRENCY, FIRST AND NON-NEGOTIABLE (rule 6, the mutex; owner recorded per GAL-D16). Before anything else,
 acquire the mutex: an owned git ref refs/pm/tick-lock, taken by compare-and-swap
 against non-existence with `git update-ref --create-reflog -m "pm tick lock"
 refs/pm/tick-lock <commit> ""`. Exactly one caller wins. If you lose, exit
@@ -40,7 +40,8 @@ minutes only by explicit compare-and-swap against the value you observed, and
 record the steal. Immediately after acquisition, write the owner to the cursor: a
 lock_history entry with job_id, acquired_at, acquired_value, released_at null
 and stolen_from, committed before any other step (GAL-D16); fill released_at at
-release, before deleting the ref. Separately and additionally: re-reading{{SP:1:LOOP_HOME}}/loop-state.json is THE LAST OPERATION before any mutating
+release, before deleting the ref. Separately and additionally: re-reading
+{{SP:1:LOOP_HOME}}/loop-state.json is THE LAST OPERATION before any mutating
 step, and that step aborts if lock ownership or merge_hold changed since you
 started. THE MERGE STEP MUST RE-READ AND ABORT SPECIFICALLY, because it is the
 only irreversible one.
@@ -84,7 +85,9 @@ refusal on such an edit is the guard working. Do not route around it.
 
 THE DECISION QUEUE IS APPEND-ONLY INTAKE (GAL-D15). Never edit a queue entry to
 mark closure; an item is closed when the ledger answers it. Write only the header
-of the project state file. Ruling-shaped text is attended-only by content.DISPATCH. Headless agents launch through {{SP:4:EXEC_START}} with program
+of the project state file. Ruling-shaped text is attended-only by content.
+
+DISPATCH. Headless agents launch through {{SP:4:EXEC_START}} with program
 {{SP:5:AGENT_BIN}} and credential {{SP:5:AGENT_CREDENTIAL}}, a reference the
 runtime resolves, never a value. Use a streaming output format so a killed agent
 still leaves a partial trail on disk. The exact argument list is in

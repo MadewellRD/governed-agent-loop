@@ -124,6 +124,7 @@ shared state as the last operation before any mutating step and abort if ownersh
 or a hold changed. The irreversible step gets this check unconditionally. Write the
 holder into the shared state the moment the lock is taken, not when it is released:
 a record that only exists after release cannot show who holds the lock now.
+
 **7. Rulings originate in the ledger.** A decision is ratified when it lands in the
 gated decision record. A prompt may restate a ruling; it may never originate one.
 The reference implementation recorded a ratification citing a prompt that had been
@@ -151,7 +152,9 @@ refusal is the guard working, and the rule exists so that nothing is built on th
 assumption it will not. The rule is about content, not paths: a disposition or a
 "next run does X" paragraph is an instruction wherever it lands, so the decision
 queue is append-only intake and closure lives only in the ledger.
+
 ---
+
 ## What is in the box
 
 | Path | What it is |

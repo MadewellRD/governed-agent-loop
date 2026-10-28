@@ -9,7 +9,7 @@ the claims are checkable, not decorative.
 The reference implementation is SignalDesk AiTSM: a Rust workspace of about thirty
 crates on Windows, dispatching Claude Code headlessly through a governed MCP
 execution runtime, supervised by an hourly scheduled task. It went live on
-2026-10-15. This log covers 2026-10-15 through 2026-10-20.
+2026-10-15. This log runs from 2026-10-15 onward; every entry is dated.
 
 If a rule in this method looks excessive, find its entry here first.
 

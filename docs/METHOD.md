@@ -407,6 +407,8 @@ And it assumes an operator who will dispose of parked items on a cadence. The lo
 never blocks on a human, but it does accumulate decisions, and a queue that is never
 drained is a loop that eventually has nothing dispatchable.
 
+---
+
 ## 13. The status plane
 
 Everything above produces evidence; none of it produces visibility. A loop that
@@ -436,6 +438,8 @@ date.
 The task itself is mechanical, which is the point. It runs two scripts, writes
 three sentences that the page labels as prose, and publishes. It is read-only on
 the repository and never takes the lock. Rule 10 puts it on the cheapest model.
+
+---
 
 ## 14. Delegation and its limits
 
@@ -467,6 +471,8 @@ decider, the clock read from the machine, the options rejected and why. The huma
 can reverse any of them. In practice reversal gets expensive fast once code lands
 under a ruling, which is why the fourth limit asks for that to be flagged rather
 than discovered.
+
+---
 
 ## 15. Cost as a design constraint
 

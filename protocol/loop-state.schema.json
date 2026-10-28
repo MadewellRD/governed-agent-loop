@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/MadewellRD/governed-agent-loop/protocol/loop-state.schema.json",
   "title": "Governed Agent Loop cursor",
-  "description": "The single mutable record of loop position. The only loop file that lives outside the gate (GAL-D05). One file, one writer at a time (GAL-D06 mutex), every timestamp from the host clock. Additional properties are permitted so a project can extend it; the fields here are the ones the protocol reads.",
+  "description": "The single mutable record of loop position. The only loop file that lives outside the gate (GAL-D05). One file, one writer at a time (rule 6, the mutex), every timestamp from the host clock. Additional properties are permitted so a project can extend it; the fields here are the ones the protocol reads.",
   "type": "object",
   "required": ["schema", "state", "merge_hold", "lock", "queued", "parked", "dec_pending_inbox", "last_tick"],
   "properties": {

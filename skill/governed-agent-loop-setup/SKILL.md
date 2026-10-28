@@ -41,7 +41,7 @@ contains `protocol/pm-tick.md`, `scripts/setup-loop.template.ps1`,
 an existing git repository with an authoritative product branch. Record both
 absolute paths. Do not proceed on a repo with no commits.
 
-## Step 1: the eight swap-point questions
+## Step 1: the ten swap-point questions
 
 Ask with the question tool, grouped so the user answers in at most three
 rounds. Offer the reference value as the recommended default where it is
@@ -69,12 +69,13 @@ portable. For each, the token names you will resolve are listed.
    `{{SP:5:AGENT_TIMEOUT_MS}}`). Which coding agent, which model (ask the user
    to name it; do not pick), which tool allowlist, which credential reference,
    what timeout. The grant must cover the gate command or the agent cannot
-   self-gate (rule nine).
+   self-gate (rule 8).
 6. **Scheduler** (`{{TICK_TASK_NAME}}`, `{{GATEKEEPER_TASK_NAME}}`,
    `{{DEVICE_WATCHDOG_TASK_NAME}}`, `{{STATUS_TASK_NAME}}`,
    `{{TICK_BACKSTOP_CRON}}`). Default: Claude scheduled tasks, gatekeeper
    hourly, supervisor fired by the gatekeeper with a sparse self-schedule as a
-   backstop (`0 */6 * * *`), decision session every 4h, device watchdog every
+   backstop (`0 */6 * * *`), decision session daily (every 4h once a standing
+   delegation exists, see step 4), device watchdog every
    4h, cloud watchdog every 6h, status every 2h. Confirm cadences and the
    user's time zone. Offset the gatekeeper a few minutes ahead of the
    supervisor's backstop so the two do not collide on the same minute.
@@ -98,7 +99,7 @@ Also collect the unnumbered values: `{{PROJECT_NAME}}`, `{{PM_IDENTITY}}`
 `{{PRODUCT_INVARIANTS}}` (the product's hard invariants, pasted or pointed at),
 `{{AGENT_RULES_FILE}}` (CLAUDE.md or equivalent), `{{PROJECT_STATE_FILE}}`,
 `{{BUILD_STATE_FILE}}`, and the timing values `{{LOCK_STALE_MINUTES}}` (50),
-`{{LIVENESS_GRACE_MINUTES}}` (240), `{{WATCHDOG_STALE_HOURS}}` (3),
+`{{LIVENESS_GRACE_MINUTES}}` (10), `{{WATCHDOG_STALE_HOURS}}` (3),
 `{{CLOUD_WATCHDOG_STALE_HOURS}}` (8). Defaults in parentheses are the reference
 values and are fine for a first loop.
 
@@ -159,7 +160,7 @@ machine is asleep. Everything else reads the repository and needs it.
 |---|---|---|---|---|
 | `{{GATEKEEPER_TASK_NAME}}` | hourly | yes | cheapest adequate | `gatekeeper.prompt.md` |
 | `{{TICK_TASK_NAME}}` | `{{TICK_BACKSTOP_CRON}}` (see below) | yes | strongest | `tick.prompt.md` |
-| decision session | every 4h | yes | strong | `digest.prompt.md` |
+| decision session | daily; every 4h under GAL-D27 | yes | strong | `digest.prompt.md` |
 | `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | cheapest adequate | `watchdog-device.prompt.md` |
 | cloud watchdog | every 6h | **no** | cheapest adequate | `watchdog-cloud.prompt.md` |
 | `{{STATUS_TASK_NAME}}` | every 2h | yes | cheap | `status.prompt.md` |
