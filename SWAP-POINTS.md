@@ -23,7 +23,7 @@ Fill these in before you copy anything. Everything else derives from them.
 | 3 | Receipts directory (the binding exclusion) | `docs/gate-receipts/` |
 | 4 | Execution substrate | nMCP `execute_start` on Windows, service account `NT SERVICE\nMCP` |
 | 5 | Agent invocation and capability grant | `claude -p … --allowedTools Bash(cargo:*) …` |
-| 6 | Scheduler | Claude scheduled tasks, hourly gatekeeper, supervisor fired on demand with a sparse backstop |
+| 6 | Scheduler | Claude scheduled tasks, hourly gatekeeper, supervisor fired on demand with a sparse backstop; none of the three triggers bound to the machine |
 | 7 | Exclusive resources the gate needs | one Postgres instance via `TEST_DATABASE_URL` |
 | 8 | Decision ledger path | `docs/DECISIONS.md`, append only, gated |
 | 9 | Registry file and status publish target | `docs/engineering-spec/tracker.json` seeds the plan of record; the page publishes as a claude.ai artifact the status task republishes |
@@ -179,17 +179,36 @@ work, and exits otherwise (GAL-D31). The supervisor keeps a sparse self-schedule
 a backstop so a dead gatekeeper degrades the loop to slow rather than to silent.
 
 **Do not arm that shape first.** The gatekeeper's fire path proves itself the moment
-there is work. Its SKIP path only exercises once the queue genuinely empties, and
-that is the path that can stop the loop. Run the supervisor hourly alongside the
-gatekeeper until you have observed both, then move the supervisor to its backstop.
-The mutex makes the overlap safe: the second caller loses the compare-and-swap and
-exits.
+there is work. Its SKIP path only exercises once the queue genuinely empties or
+blocks, and that is the path that can stop the loop. Run the supervisor hourly
+alongside the gatekeeper until all three of GAL-D35's preconditions hold, read
+back from the scheduler's own task record: the skip path has been observed, the
+gatekeeper runs with automatic approval, and it carries no device binding. The
+reference ran a gatekeeper without automatic approval for a day and nothing
+noticed, because the hourly supervisor hid it; the next day device absence
+disabled the gatekeeper and the supervisor together. The mutex makes the overlap
+safe: the second caller loses the compare-and-swap and exits.
+
+**The gatekeeper judges the determination, not the state name.** It skips only
+when the cursor's queue field carries the supervisor's own fresh statement that
+nothing is dispatchable, empty or blocked, and fires on everything else. The
+reference's first gatekeeper matched the string idle, the ledger introduced
+idle-blocked the same day, and a blocked loop fired the supervisor hourly
+(GAL-D34). Any rule in a cheap reader that names a state is a rule the next
+ledger entry can silently invalidate.
 
 **The failure to design against.** The reference scheduler auto-disables a
 device-bound task when its machine is unreachable at a firing. A laptop asleep at
-the wrong minute permanently stopped the only dispatcher, twice, silently. Whatever
-your scheduler does in that situation, find out before you depend on it, and build
-the watchdog layer below regardless.
+the wrong minute stopped the only dispatcher three times, the third time taking
+the gatekeeper and the decision session with it in eleven minutes while a
+cloud-only task kept running. The answer is not a better watchdog. No trigger of
+the supervisor is bound to the machine (GAL-D33): the gatekeeper, the supervisor
+and the decision session run unbound and reach the repository through the
+execution substrate, and a run that finds the machine asleep ends in one line.
+That needs a substrate reachable from the cloud, which the reference substrate
+is. If yours is a shell on the machine and nothing else, the binding is
+unavoidable; record it as a known weakness, keep the supervisor on its hourly
+schedule, and understand that the cloud watchdog is your only cover.
 
 ---
 
@@ -241,6 +260,14 @@ alerts on a disabled task, a suspension, a failed run or a stale run. The second
 the important one, because the scheduler's record is written by a third party and
 is therefore sound in a way a self-published heartbeat never is. Same reasoning as
 rule 5.
+
+**Scheduler health is the check the repository cannot make.** A disabled
+scheduled task leaves no trace in the tree or the cursor. When something is
+reported broken, read the scheduler's task records before probing the tree, and
+have the cloud watchdog read every loop task rather than only the supervisor:
+the reference's attended supervisor probed a healthy tree four times during a
+live outage that had disabled three tasks. It is also the only check that still
+works when the machine is unreachable, which is the moment it matters.
 
 Make them read-only and alert-only unless you have deliberately decided otherwise.
 A watchdog that repairs things is a second actor in a system whose whole premise is

@@ -137,6 +137,13 @@ decision, merges, publish outcome, dispatches, failures, and what is on main ver
 what is only local and what is on origin. A tick with nothing to say ends in one
 line.
 
+A run that ends with nothing in flight says so in every field: job id and
+dispatch time cleared, the queue and any next-action text rewritten to describe
+the situation it leaves rather than the one it found. The cursor has more than
+one reader, and a cheap one cannot tell a stale field from a live one. The
+reference had a parked run leave a merged packet described as dispatched, and
+the next morning the gatekeeper fired on it every hour (GAL-D34).
+
 Nothing in that sequence waits for a human. Anything that would wait parks instead.
 
 ---
@@ -261,6 +268,14 @@ because the early items are the ones where being wrong is expensive.
 End with a verdict: accept, accept with required changes, or reject, with specific
 reasons. "Looks good" is not a verdict.
 
+When a gate is red and two explanations are on the table, the experiment to run is
+the one whose outcome differs between them. The reference re-ran a failing test in
+isolation, carefully, and learned nothing, because a pass under enforced isolation
+was what both candidates predicted. Before running the natural experiment, write
+down what each candidate predicts for it; if the predictions agree it is not a
+discriminator. The question that usually is one concerns the thing the assertion
+reads: who else writes to it. That resolved the reference case in two greps.
+
 ### 7.4 When the packet is wrong
 
 Sometimes the agent deviates from the packet and the agent is right. The reference
@@ -304,6 +319,15 @@ host-clock stamped and committed to the side branch, is a valid origin, with its
 ledger text landing on the next packet branch. Without that, the rule deadlocks
 against the requirement that ledger appends ride a gated branch.
 
+The corollary the reference paid for three times in one day: a ruling that sits
+on a carriage branch and not on main does not exist to the loop, because every
+run reads the ledger on main. An outstanding carriage is therefore work in the
+queue. Every run probes for one by content before it may declare the queue empty
+or blocked, and the run that finds one lands it under the independent gate when
+no packet branch will carry it (GAL-D32). The deciding session never lands its
+own carriage; keeping ruling and merging in different runs is what the
+independent gate protects.
+
 ---
 
 ## 9. The human's role
@@ -320,7 +344,10 @@ with the next parkable item. Nothing waits.
 **The digest.** A separate scheduled task, read-only, runs once a day and produces
 a digest of every open item: one paragraph of context, the options, a recommended
 disposition with reasoning grounded in the ledger. It is advisory input. The
-operator reads it in five minutes.
+operator reads it in five minutes. Before it repeats an intake, it probes the
+claim against current main: an intake describes the tree as it was when the
+intake was filed, by a run that may have been wrong, and the reference
+supervisor once repeated a closed gap to the operator as open (GAL-D37).
 
 **The decision window.** The operator disposes of the open items, typically by
 firing the digest task manually and directing it in session. Rulings are recorded
@@ -360,7 +387,26 @@ watchdog does not.
 
 **Nothing watches the outermost layer.** Say so in its own alert text rather than
 implying coverage you do not have, and stop the regress there deliberately. One
-device-independent layer over a device-dependent loop is the right place to stop.
+device-independent layer over the loop is the right place to stop.
+
+**The watchdogs do not prevent the disable.** The reference lost its dispatcher
+to device absence a third time with both layers armed, and the loss was an hour
+rather than days because the cloud layer caught it. That is the layer working,
+and it is still an outage. The lesson moved from the watchdog layer into the
+design: no trigger of the supervisor may be something a closed laptop can switch
+off (GAL-D33). The supervisor needs the machine for a few commands; it does not
+need to be bound to it. Where the execution substrate can be reached from the
+cloud, the gatekeeper, the supervisor and the decision session run unbound and
+reach the machine through it. A run that finds the machine asleep ends in one
+line and costs nothing; a task the scheduler has disabled costs the loop until
+a human notices.
+
+**Scheduler health is the one condition the repository is blind to.** A disabled
+task leaves no trace in the tree or the cursor. The reference's attended
+supervisor, told that something was broken, probed a healthy tree four times and
+missed a live outage. When something is wrong, the scheduler's own task records
+are read first, because that is also the only check that still works when the
+machine is unreachable.
 
 ---
 
@@ -406,7 +452,8 @@ decision with its own evidence.
 It assumes a scheduler with a reliable cadence, on-demand firing, run records
 readable from elsewhere, and notifications. Where the scheduler has surprising
 behaviour, such as auto-disabling a task when its machine is unreachable, the
-watchdog layer compensates but does not cure it.
+answer is to keep the loop's triggers off the machine (GAL-D33); the watchdog
+layer shortens the outages that remain and prevents none of them.
 
 And it assumes an operator who will dispose of parked items on a cadence. The loop
 never blocks on a human, but it does accumulate decisions, and a queue that is never
@@ -507,11 +554,48 @@ stop waking it for nothing. A cheap gatekeeper reads the cursor and the lock and
 decides whether the supervisor is needed this hour. It fails open, because a wrong
 fire costs one run and a wrong silence costs days.
 
-Two consequences are easy to miss. The gatekeeper becomes the component that must
-run on schedule, so the watchdogs have to watch it rather than the supervisor. And
-the supervisor should keep a sparse self-schedule underneath the gatekeeper, so
-that a gatekeeper failure degrades the loop to slow rather than to silent.
+The gatekeeper keys its skip on the cursor's own determination that nothing is
+dispatchable, in either shape, an empty queue or a blocked one, and never on a
+state name. The reference's first gatekeeper skipped on the literal string idle;
+the ledger introduced idle-blocked the same day, and a provably blocked loop
+fired the supervisor every hour. The set of state names grows as the ledger
+grows, and a cheap reader cannot be re-taught each time (GAL-D34).
+
+Three consequences are easy to miss. The gatekeeper becomes the component that
+must run on schedule, so the watchdogs have to watch it rather than the
+supervisor. The supervisor should keep a sparse self-schedule underneath the
+gatekeeper, so that a gatekeeper failure degrades the loop to slow rather than to
+silent. And the supervisor leaves its hourly schedule only once the gatekeeper
+has shown its skip path, runs with automatic approval and carries no device
+binding, all three read back from the scheduler (GAL-D35): a gatekeeper that
+waits for a human, or that the scheduler can switch off, is a single point of
+failure in front of the component the loop depends on. The reference ran one
+without automatic approval for a day and nothing noticed, because the
+supervisor's own schedule covered it.
 
 The general principle: in a loop where the human is deliberately not in the path,
 the budget is the only remaining hard limit, and anything that is not proportional
 to work done will eventually consume it.
+
+---
+
+## 16. Gates that subtract
+
+A build-integrity decision usually removes something: a feature from a
+production binary, a path from a deploy, a tool from a grant. Each such decision
+is reviewed on its own terms and passes on them. What nobody is asked is what the
+system can no longer do once all of them hold.
+
+The reference gated its migration embed out of the production binary, correctly;
+its schema check never opened a database, correctly; its compose file mounted
+migrations for first boot only, correctly. Together they left a production
+database that could not take a migration and could not state its own schema
+version, found when a deploy window was scoped to apply migrations that had no
+mechanism to run.
+
+So a gate that removes a capability names its replacement, or names the gap with
+its closure path and the deploy gate that blocks the unsafe shape until it
+closes, and the probe at ruling time confirms the replacement exists (GAL-D36).
+Building the replacement is a separate act from authorising it to run: a tool
+that can alter production schema is wired into a deploy sequence by its own
+decision, never by the packet that built it.
