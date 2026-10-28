@@ -170,6 +170,7 @@ queue is append-only intake and closure lives only in the ledger.
 | `prompts/` | The six stored prompts: gatekeeper, supervisor, decision session, both watchdogs, status. |
 | `scripts/gate.template.ps1` | The gate skeleton. The binding rule is the load-bearing part. |
 | `scripts/setup-loop.template.ps1` | Arming: tool paths, credentials, execution profile, policy. |
+| `scripts/kit-check.ps1` | The kit's own gate: structural checks that run on every pull request to this repository. Not copied into a target. |
 | `scripts/status-snapshot.template.ps1` | The status plane: a deterministic, read-only rendering of the tree into one JSON document, with provenance shas on every section. |
 | `scripts/status-validate.template.ps1` | Gates publication of a snapshot: schema plus semantic checks; the status task refuses to publish on failure. |
 | `protocol/plan.schema.json` | The plan of record: every unit of work, its lane and phase, its status, its evidence, its conflicts. Countable, under the gate. |
@@ -202,6 +203,27 @@ written around that fact.
 If you would rather not do this by hand, the companion skill
 `governed-agent-loop-setup` runs the whole sequence against a named project,
 asks only the questions that genuinely differ, and verifies the result.
+
+---
+
+## How this kit gates itself
+
+The kit asks adopters to gate their work, so it gates its own. A change to
+the kit lands by branch and pull request, never by a direct push to `main`.
+`scripts/kit-check.ps1` runs on every pull request and must pass: it checks
+the structure the kit promises, including the seven ledger fields in order,
+contiguous failure-log numbering, that every GAL-D, LOOP and DEFECT reference
+resolves, that every placeholder a prompt uses is one the setup skill
+collects, that no `---` sits directly under text, that no em dash and no
+credential-shaped string is tracked, and that every JSON file parses. A
+reviewer then reads the diff against the reference implementation's own
+record before `main` moves.
+
+The check catches structure; only the reviewer catches facts. On 2026-10-28
+eight commits reached `main` with no review gate and one of them cited the
+reference as proof of a shape the reference had not achieved; the check would
+have passed it, and a reviewer caught it (GAL-D33-C1). The gate exists
+because of that day. Commits carry the MadewellRD identity.
 
 ---
 
