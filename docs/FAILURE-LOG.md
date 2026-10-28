@@ -596,8 +596,10 @@ Not rules, but every one of these cost a tick.
 - Publishing to the remote compares `expected_head` as a literal string, so the
   full 40-character sha is required.
 - Pushing main from any automated session was refused by a permission classifier
-  twice. The push became operator-owned and the protocol says so, rather than
-  letting ticks burn attempts.
+  twice. The push became operator-owned for a time and the protocol said so.
+  GAL-D18 reversed that once the governed publish path admitted a credential by
+  reference: the loop publishes after every fast-forward, and a refusal is
+  recorded and retried by the next tick rather than handed back to the human.
 
 ---
 

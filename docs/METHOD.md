@@ -119,7 +119,11 @@ and abort if lock ownership or a hold has changed since the tick began. A hold i
 an operator-set flag that interposes between gate and merge; a held tick does
 everything up to this point and then stops. The merge itself is a fast-forward,
 which means main is never checked out anywhere, which means there is no working
-tree on main to drift.
+tree on main to drift. After the fast-forward the tick publishes main through the
+governed path with a credential passed by reference (GAL-D18). A merge the loop
+performed is a merge the loop finishes; a refused publish is recorded and retried
+by the next tick, never handed to the human, because that reintroduces the lag the
+rule closes.
 
 **Provision and dispatch.** Write the next packet from the template, cut a branch
 from main, create a worktree, put the packet file in it, and start one agent with a
@@ -129,8 +133,9 @@ job; a second would be invisible to the next harvest.
 
 **Release, record, report.** Release the mutex by compare-and-swap, write the
 cursor with host-clock timestamps, and report in a fixed order: new items needing
-decision, merges, dispatches, failures, and what is on main versus what is only
-local. A tick with nothing to say ends in one line.
+decision, merges, publish outcome, dispatches, failures, and what is on main versus
+what is only local and what is on origin. A tick with nothing to say ends in one
+line.
 
 Nothing in that sequence waits for a human. Anything that would wait parks instead.
 

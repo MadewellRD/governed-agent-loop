@@ -25,7 +25,7 @@
     "main": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$", "description": "Local integration-branch tip as of the last tick." },
     "origin_gap": {
       "type": "object",
-      "description": "From `git rev-list --left-right --count origin/<main>...<main>`. Reported, never acted on by a tick; pushing is operator-owned unless the ledger says otherwise.",
+      "description": "From `git rev-list --left-right --count origin/<main>...<main>`. Written every tick. The publish at step 6d (GAL-D18) is what closes it; a non-zero ahead count after a tick means that publish was refused or skipped, and the refusal is recorded beside it.",
       "properties": {
         "behind": { "type": "integer", "minimum": 0 },
         "ahead": { "type": "integer", "minimum": 0 }
@@ -144,7 +144,7 @@
       "dispatched_at": "2026-10-20T23:32:10Z",
       "timeout_ms": 14400000,
       "main": "2961bc4",
-      "origin_gap": { "behind": 0, "ahead": 24 },
+      "origin_gap": { "behind": 0, "ahead": 0 },
       "merge_hold": { "active": false },
       "lock": null,
       "queued": [
@@ -157,7 +157,7 @@
       "closed_this_tick": [],
       "dec_pending_inbox": [],
       "last_tick": "2026-10-20T23:35:02Z",
-      "last_tick_result": "Tick 29: lock acquired by CAS, no job in flight, PKT-009 (AUDIT-2 lockfile-only bump) provisioned and dispatched as job ef90c525 with the four inbox entries carried as bookkeeping on the branch. No merges. No failures. Local main 24 ahead of origin; push is operator-owned.",
+      "last_tick_result": "Tick 29: lock acquired by CAS, no job in flight, PKT-009 (AUDIT-2 lockfile-only bump) provisioned and dispatched as job ef90c525 with the four inbox entries carried as bookkeeping on the branch. No merges. No failures. Nothing to publish; origin gap 0 0.",
       "last_merged": { "packet": "PKT-008", "sha": "2961bc4", "receipt": "239e6e26b70f", "at": "2026-10-20T20:40:33Z" },
       "notes": "Pushing main is operator-owned per GAL-D07 scope note; do not create a publish worktree."
     }

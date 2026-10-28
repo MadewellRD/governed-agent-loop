@@ -24,6 +24,7 @@ defaults stated here.
 | `{{SP:4:EXEC_START}}` | start a durable job | nMCP `execute_start` |
 | `{{SP:4:EXEC_STATUS}}` | read a job record | nMCP `execute_status` |
 | `{{SP:4:SERVICE_ACCOUNT}}` | identity the supervisor runs as | `NT SERVICE\nMCP` |
+| `{{SP:4:PUBLISH_CREDENTIAL}}` | credential reference for the governed publish, never a value; a different secret from the agent's | `nmcp://secret/github-pat` |
 | `{{SP:5:AGENT_BIN}}` | the agent executable | `claude` |
 | `{{SP:5:AGENT_CREDENTIAL}}` | credential reference, never a value | `nmcp://secret/Claude-Code-OAuth` |
 | `{{SP:5:AGENT_TOOL_GRANT}}` | the scoped tool grant | `Bash(cargo:*) Bash(git:*) Bash(pwsh:*) Bash(powershell:*) Bash(gitleaks:*)` |
@@ -57,9 +58,11 @@ defaults stated here.
 - Every timestamp you write is read from the host clock via a command. Never
   estimated. A forward-dated lock suppresses legitimate ticks for the length of
   the skew.
-- Pushing to the remote is operator-owned unless `{{SP:8:LEDGER_PATH}}` says
-  otherwise. Do not attempt it. Report the gap from
-  `git rev-list --left-right --count origin/{{SP:1:MAIN}}...{{SP:1:MAIN}}`.
+- Publishing `{{SP:1:MAIN}}` is the loop's job (GAL-D18); step 6d does it after
+  every fast-forward. Never force, never mirror, never any branch but
+  `{{SP:1:MAIN}}`. Report the gap from
+  `git rev-list --left-right --count origin/{{SP:1:MAIN}}...{{SP:1:MAIN}}` whether
+  or not the publish succeeded.
 - Anything needing an architectural decision, new scope, or a new dependency parks
   in `{{SP:8:DEC_QUEUE_PATH}}` with context, options and a recommendation, and the
   tick continues. Nothing waits on the operator inside a tick.
@@ -235,7 +238,15 @@ This is refused if `{{SP:1:MAIN}}` is checked out anywhere, which is why it neve
 is. If the fetch is refused for that reason, something has violated the standing
 rules; park it, do not create a worktree on main to work around it.
 
-6d. Do not push. Record the new tip and the origin gap.
+6d. **Publish (GAL-D18).** Create a throwaway worktree on `{{SP:1:MAIN}}`
+(`git worktree add .worktrees/main-pub {{SP:1:MAIN}}`) and call the substrate's
+governed publish with that worktree as the path, remote `origin`, branch
+`{{SP:1:MAIN}}`, the expected head as the full 40-character sha of the new tip,
+and the credential `{{SP:4:PUBLISH_CREDENTIAL}}` by reference. Remove the
+worktree in the same tick whatever the outcome. If the call is refused by a
+permission or policy layer, record the refusal text in the cursor, do not retry in
+this tick and do not look for another route; the next tick retries after its own
+merge. Record the new tip and the origin gap either way.
 
 6e. Tear down the agent worktree. Preserve any uncommitted file in the write
 surface first by carrying it onto the next packet branch, never onto the branch
@@ -324,8 +335,9 @@ git update-ref -d refs/pm/tick-lock <value-you-wrote>
 ```
 
 9c. Report, headlined in this order: new entries in `{{SP:8:DEC_QUEUE_PATH}}`,
-merges, dispatches, failures. Then state plainly what is on `{{SP:1:MAIN}}` versus
-what is only local, with the rev-list count. Then the mutex: acquired cleanly,
+merges, publish outcome, dispatches, failures. Then state plainly what is on
+`{{SP:1:MAIN}}` versus what is only local and what is on origin, with the rev-list
+count. Then the mutex: acquired cleanly,
 contended, stolen, released.
 
 A tick with nothing to report ends with one quiet line.
