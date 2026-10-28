@@ -175,7 +175,9 @@
       "last_tick": "2026-10-20T23:35:02Z",
       "last_tick_result": "Tick 29: lock acquired by CAS, no job in flight, PKT-009 (AUDIT-2 lockfile-only bump) provisioned and dispatched as job ef90c525 with the four inbox entries carried as bookkeeping on the branch. No merges. No failures. Nothing to publish; origin gap 0 0.",
       "last_merged": { "packet": "PKT-008", "sha": "2961bc4", "receipt": "239e6e26b70f", "at": "2026-10-20T20:40:33Z" },
-      "notes": "Pushing main is operator-owned per GAL-D07 scope note; do not create a publish worktree."
+      "last_job_id": "3f1c0a77-5b2e-4d0c-9a51-8e7d2c4b6f10",
+      "carriage": null,
+      "notes": "Publish after every fast-forward through the governed path with the credential by reference (GAL-D18); a refusal is recorded here and retried next tick."
     }
   ]
 }
