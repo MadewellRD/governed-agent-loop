@@ -9,7 +9,8 @@ You are arming a supervisory control loop in someone's repository. The loop
 is: a scheduled supervisor tick that reads one cursor, harvests the last
 agent's delivered commit, reviews it at the delivered tip against a gate
 receipt bound to that tip, merges or rejects, and dispatches exactly one new
-packet; a daily decision digest; and two watchdogs. The kit you are
+packet; a cheap gatekeeper in front of it; a daily decision digest; two
+watchdogs; and a status task. The kit you are
 parameterizing lives in the `governed-agent-loop` repository. Read its
 `README.md` (the eleven rules) and `SWAP-POINTS.md` before asking anything. The
 eleven rules are not configurable. If a substrate makes one impossible, stop and
@@ -59,11 +60,17 @@ portable. For each, the token names you will resolve are listed.
 3. **Receipts directory** (`{{SP:3:RECEIPTS_DIR}}`). Default
    `docs/gate-receipts/`. This is the only binding exclusion; say so.
 4. **Execution substrate** (`{{SP:4:EXEC_START}}`, `{{SP:4:EXEC_STATUS}}`,
-   `{{SP:4:SERVICE_ACCOUNT}}`). How does the supervisor run a long command and
-   poll it? Which account does it run as? The reference is a governed MCP
-   execution runtime under a Windows service account. If the answer is "the
-   shell in my scheduled task", record that and note that liveness must still
-   key on terminal status, not pid.
+   `{{SP:4:SERVICE_ACCOUNT}}`, `{{SP:4:PUBLISH_CREDENTIAL}}`). How does the
+   supervisor run a long command and poll it? Which account does it run as?
+   Which credential reference does the governed publish use (GAL-D18; a
+   different secret from the agent's)? Is the substrate reachable from the
+   cloud, or only from a shell on the machine? The reference is a governed MCP
+   execution runtime under a Windows service account, reachable from the cloud.
+   If the answer is "the shell in my scheduled task", record that, note that
+   liveness must still key on terminal status, not pid, and note that every
+   trigger of the supervisor will then be device-bound (GAL-D33), which is a
+   known weakness to write into the target's ledger and a reason the gatekeeper
+   cutover in step 4 is not available.
 5. **Agent invocation and grant** (`{{SP:5:AGENT_BIN}}`,
    `{{SP:5:AGENT_TOOL_GRANT}}`, `{{SP:5:AGENT_CREDENTIAL}}`,
    `{{SP:5:AGENT_TIMEOUT_MS}}`). Which coding agent, which model (ask the user
@@ -152,18 +159,29 @@ line and stop.
 ## Step 4: the six scheduled tasks
 
 Create them with the scheduled-task tools (never a local cron). Each prompt is
-the corresponding resolved file from `prompts/`. Only the cloud watchdog must
-NOT require the computer: its entire value is that it still runs when the
-machine is asleep. Everything else reads the repository and needs it.
+the corresponding resolved file from `prompts/`. Reading the repository does
+not require binding a task to the computer: where the execution substrate is
+reachable from the cloud, the task reaches the repository through it, and a run
+that finds the machine asleep ends in one line. A task that IS bound to the
+computer is a task the scheduler can switch off when the machine is unreachable,
+and the reference lost its gatekeeper, supervisor and decision session that way
+in eleven minutes. So no trigger of the supervisor is bound (GAL-D33). The
+device watchdog is bound by definition, since the machine is what it watches,
+and the status task may be.
 
-| Task | Cadence | Computer | Tier | Prompt |
-|---|---|---|---|---|
-| `{{GATEKEEPER_TASK_NAME}}` | hourly | yes | cheapest adequate | `gatekeeper.prompt.md` |
-| `{{TICK_TASK_NAME}}` | `{{TICK_BACKSTOP_CRON}}` (see below) | yes | strongest | `tick.prompt.md` |
-| decision session | daily; every 4h under GAL-D27 | yes | strong | `digest.prompt.md` |
-| `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | cheapest adequate | `watchdog-device.prompt.md` |
-| cloud watchdog | every 6h | **no** | cheapest adequate | `watchdog-cloud.prompt.md` |
-| `{{STATUS_TASK_NAME}}` | every 2h | yes | cheap | `status.prompt.md` |
+| Task | Cadence | Computer | Approval | Tier | Prompt |
+|---|---|---|---|---|---|
+| `{{GATEKEEPER_TASK_NAME}}` | hourly | **no** | automatic | cheapest adequate | `gatekeeper.prompt.md` |
+| `{{TICK_TASK_NAME}}` | `{{TICK_BACKSTOP_CRON}}` (see below) | **no** | automatic | strongest | `tick.prompt.md` |
+| decision session | daily; every 4h under GAL-D27 | **no** | automatic | strong | `digest.prompt.md` |
+| `{{DEVICE_WATCHDOG_TASK_NAME}}` | every 4h | yes | automatic | cheapest adequate | `watchdog-device.prompt.md` |
+| cloud watchdog | every 6h | **no** | automatic | cheapest adequate | `watchdog-cloud.prompt.md` |
+| `{{STATUS_TASK_NAME}}` | every 2h | yes | automatic | cheap | `status.prompt.md` |
+
+"Computer: no" holds where the substrate is reachable from the cloud. Where it
+is not, those three tasks are bound, the binding is recorded in the target's
+ledger as a known weakness with the cloud watchdog as its only cover, and step 5
+below is not available.
 
 **Arm in this order, and do not shorten it.** The order exists because the
 supervisor is the only thing that harvests finished work, and an unproven
@@ -173,19 +191,30 @@ whole loop depends on.
 1. Create the supervisor on an HOURLY schedule, not the backstop. The loop must
    work without a gatekeeper first.
 2. Create the decision session, both watchdogs and the status task.
-3. Create the gatekeeper. For at least one full cycle, let both it and the
-   hourly supervisor run. They cannot collide: the supervisor's mutex means the
-   second caller loses the compare-and-swap and exits quietly. This costs one
-   extra supervisor run per hour and buys evidence.
+3. Create the gatekeeper with automatic approval and no device binding, then
+   read both back from the scheduler's task record before its first firing.
+   The reference ran a gatekeeper for a day without automatic approval and
+   nothing noticed, because the hourly supervisor hid it; a gatekeeper that
+   waits for a human fires when someone is awake, which is when the loop needs
+   it least. For at least one full cycle, let both it and the hourly supervisor
+   run. They cannot collide: the supervisor's mutex means the second caller
+   loses the compare-and-swap and exits quietly. This costs one extra supervisor
+   run per hour and buys evidence.
 4. Watch for BOTH gatekeeper paths before cutting over. The fire path proves
    itself immediately, because there is work. The SKIP path only exercises once
-   the queue genuinely empties, and it is the one that can stop the loop. A
-   gatekeeper that has only ever said yes has not demonstrated it can safely say
-   no.
-5. Only then move the supervisor to `{{TICK_BACKSTOP_CRON}}`. That schedule is
-   a floor, not a cadence: it guarantees that a completely dead gatekeeper
-   degrades the loop to slow rather than to silent, and it must be shorter than
-   the device watchdog's staleness threshold so a stall is still caught.
+   the queue genuinely empties or blocks, and it is the one that can stop the
+   loop. A gatekeeper that has only ever said yes has not demonstrated it can
+   safely say no.
+5. Only when all three GAL-D35 preconditions hold, read back from the
+   scheduler's record and not from what was asked for (skip path observed,
+   automatic approval on, no device binding), move the supervisor to
+   `{{TICK_BACKSTOP_CRON}}`. That schedule is a floor, not a cadence: it
+   guarantees that a completely dead gatekeeper degrades the loop to slow rather
+   than to silent, and it must be shorter than the device watchdog's staleness
+   threshold so a stall is still caught. If the gatekeeper is device-bound
+   because the substrate forces it, this step never happens: the supervisor
+   keeps its hourly schedule and the gatekeeper's skip only saves the sessions
+   that lose the mutex.
 
 **The watchdogs watch the hourly component.** Before the cutover that is the
 supervisor. After it, it is the GATEKEEPER, because the supervisor is then
@@ -237,13 +266,23 @@ evidence you used:
   equals an independent SHA-256 over the sorted `git ls-files -s` manifest with
   the receipts dir excluded, and whose `binds_commit` is `true`.
 - The cursor validates against `loop-state.schema.json` and is at tick 0.
-- All six tasks exist with the expected cadences, device flags and models, and
-  the cloud watchdog is the only one that does not require the computer.
+- All six tasks exist with the expected cadences, models and permission modes,
+  read back from the scheduler's task records. Every task runs with automatic
+  approval. No trigger of the supervisor (gatekeeper, supervisor, decision
+  session) is bound to the computer where the substrate allows it; where it does
+  not, that weakness is already written into the target's ledger.
 - The supervisor is still on its hourly schedule, not the backstop. The cutover
   is a later, evidence-gated step and is not part of arming.
-- The gatekeeper's decision logic has been dry-run against the live cursor by
-  hand, and its verdict matches what the cursor says. Record the verdict and the
-  three fields it read.
+- The gatekeeper's decision logic has been dry-run by hand against the live
+  cursor and against two synthetic cursors: one whose `state` is a name the
+  schema does not list and whose `queued` opens with the blocked phrase, which
+  must skip; one with a non-null `job_id`, which must fire. The live cursor
+  proves today's state; the synthetic ones prove the rule survives the next
+  state name the ledger invents (GAL-D34). Record the three verdicts and the two
+  fields the gatekeeper read.
+- The operator has been told the first diagnostic: when something is reported
+  broken, read the scheduler's task list before probing the tree, because a
+  disabled task leaves no trace in the repository (LOOP-21).
 - The gatekeeper fires the supervisor by the scheduler's fire action and not by
   any other route, and its prompt contains the fail-open rule verbatim.
 - The supervisor commit identity differs from the operator's.
