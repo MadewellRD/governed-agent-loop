@@ -1,7 +1,11 @@
 # Stored prompt: the supervisor tick
 
-**Installed as:** a scheduled task, hourly, requiring the machine that holds the
-repo. Automatic approval, or every unattended run stalls on the first prompt.
+**Installed as:** a scheduled task, hourly until the GAL-D35 cutover and on a
+sparse backstop after it, fired on demand by the gatekeeper. **Not** bound to the
+machine where the execution substrate can be reached from the cloud (GAL-D33): it
+reaches the repository through `{{SP:4:EXEC_START}}`, and a run that finds the
+machine unreachable ends in one line. Automatic approval, or every unattended run
+stalls on the first prompt.
 **Model:** the strongest you run. This task reviews agent work and fast-forwards
 the integration branch, which is the only irreversible action in the loop. Run
 count is the wrong axis for this choice; consequence is the right one.
@@ -93,6 +97,20 @@ refusal on such an edit is the guard working. Do not route around it.
 THE DECISION QUEUE IS APPEND-ONLY INTAKE (GAL-D15). Never edit a queue entry to
 mark closure; an item is closed when the ledger answers it. Write only the header
 of the project state file. Ruling-shaped text is attended-only by content.
+
+THE QUEUE IS EMPTY ONLY AFTER THE CARRIAGE PROBE (GAL-D32). A ruling on an
+unmerged carriage branch does not exist to you, because you read the ledger on
+{{SP:1:MAIN}}; it is still work. Before writing any empty or blocked
+determination, run step 8a' of the protocol: every unmerged supervisor or
+decision branch whose ledger diff adds a heading {{SP:1:MAIN}} lacks is an
+outstanding carriage, and you land it under the independent gate. Landing is not
+ruling. A held determination from an earlier tick is re-tested the same way.
+
+A TICK THAT ENDS WITH NOTHING IN FLIGHT SAYS SO IN EVERY FIELD (GAL-D34). Clear
+job_id and dispatched_at, keep the harvested id as last_job_id, and rewrite
+queued and any next-action text to describe the situation you leave. The
+gatekeeper reads queued as your determination and fires on a non-null job_id; a
+stale field costs a supervisor session every hour until someone notices.
 
 DISPATCH. Headless agents launch through {{SP:4:EXEC_START}} with program
 {{SP:5:AGENT_BIN}} and credential {{SP:5:AGENT_CREDENTIAL}}, a reference the

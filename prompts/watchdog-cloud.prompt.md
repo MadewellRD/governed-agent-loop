@@ -39,8 +39,12 @@ everything that needs it.
 
 DO EXACTLY THIS.
 
-1. Call the scheduled-task listing tool. Find "{{TICK_TASK_NAME}}" and
-   "{{DEVICE_WATCHDOG_TASK_NAME}}".
+1. Call the scheduled-task listing tool. Read EVERY task of this loop, not only
+   "{{TICK_TASK_NAME}}" and "{{DEVICE_WATCHDOG_TASK_NAME}}": the gatekeeper, the
+   decision session and the status task too. This is the one check the
+   repository cannot make, because a disabled task leaves no trace in the tree
+   or the cursor, and it is the only check that still works when the machine is
+   unreachable. The reference lost three tasks to one eleven-minute absence.
 2. For each, read: enabled, suspension_reason, ended_reason, next_run_at, and
    last_run (status, fired_at, finished_at, failure_reason).
 3. Read the current time from the tool results rather than assuming it.
@@ -49,8 +53,8 @@ DO EXACTLY THIS.
    that reported. Use it only as supporting evidence.
 
 RAISE AN ALERT if any of these hold, and say which one:
-- Either task has enabled false.
-- Either task carries a non-empty suspension_reason or ended_reason.
+- Any loop task has enabled false.
+- Any loop task carries a non-empty suspension_reason or ended_reason.
 - The supervisor's last_run status is not succeeded, naming the failure_reason.
 - The supervisor's last_run fired_at is more than {{CLOUD_WATCHDOG_STALE_HOURS}}
   hours old.

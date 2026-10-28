@@ -10,11 +10,12 @@
       "const": "gal-cursor-v1"
     },
     "state": {
-      "description": "Where the loop is. 'dispatched' means exactly one job is in flight (GAL-D10). 'indeterminate' means a job passed its timeout plus grace without a terminal status and is parked, not running (GAL-D09). 'hold-pending' means harvest, review and gate ran and the merge is waiting on the operator.",
-      "enum": ["idle", "dispatched", "indeterminate", "hold-pending", "setup-pending"]
+      "description": "Where the loop is. 'dispatched' means exactly one job is in flight (GAL-D10). 'indeterminate' means a job passed its timeout plus grace without a terminal status and is parked, not running (GAL-D09). 'hold-pending' means harvest, review and gate ran and the merge is waiting on the operator. 'idle-blocked' means nothing is in flight and nothing is dispatchable until a ruling lands. A project's ledger may add states; only the supervisor keys on a state name, and the gatekeeper never does (GAL-D34).",
+      "enum": ["idle", "idle-blocked", "dispatched", "indeterminate", "hold-pending", "setup-pending"]
     },
     "current_packet": { "type": ["string", "null"], "description": "Packet id in flight, e.g. PKT-012. Null when idle." },
-    "job_id": { "type": ["string", "null"], "description": "The execution substrate's job identifier. The only handle used for liveness; never a pid." },
+    "job_id": { "type": ["string", "null"], "description": "The execution substrate's job identifier. The only handle used for liveness; never a pid. Null whenever no job is in flight: a run that ends with nothing in flight clears it in the same write that records its result (GAL-D34), because the gatekeeper fires on a non-null value." },
+    "last_job_id": { "type": ["string", "null"], "description": "The most recent job id after it was harvested or declared dead, preserved with provenance when job_id is cleared." },
     "branch": { "type": ["string", "null"] },
     "worktree": { "type": ["string", "null"], "description": "Repo-relative worktree path for the agent, e.g. .worktrees/agent-PKT-012." },
     "branch_tip_at_dispatch": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$" },
@@ -81,7 +82,7 @@
     "queued": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Dispatchable packets in order. One line each, including any sequencing condition."
+      "description": "Dispatchable packets in order, one line each including any sequencing condition. When nothing is dispatchable the first entry is the supervisor's determination, written fresh every tick after the outstanding-carriage probe (GAL-D32), opening with the project's EMPTY or BLOCKED phrase. The gatekeeper keys on that opening and on nothing else in this file except job_id (GAL-D34)."
     },
     "parked": {
       "type": "array",
@@ -107,6 +108,21 @@
       }
     },
 
+    "carriage": {
+      "description": "The one outstanding ledger carriage, if any (GAL-D28, GAL-D32): recorded by the session that cut it when it may write the cursor, cleared by the tick that lands it. The tick's probe at step 8a' is the check; this record is only the cheap pointer.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["branch", "base", "ids"],
+          "properties": {
+            "branch": { "type": "string" },
+            "base": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "The integration-branch commit the carriage was cut from." },
+            "ids": { "type": "array", "items": { "type": "string" }, "description": "Decision ids the carriage carries." }
+          }
+        }
+      ]
+    },
     "last_tick": { "$ref": "#/$defs/timestamp" },
     "last_tick_result": { "type": "string", "description": "One paragraph. What the last tick did, in the report order: new decisions, merges, dispatches, failures." },
     "last_merged": {

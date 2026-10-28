@@ -281,7 +281,24 @@ Never append to a branch whose gate receipt already binds its tree.
 ## Step 8: Provision and dispatch
 
 8a. **One packet in flight.** If `state` is `dispatched` after step 3, do not
-dispatch. If the queue is empty, go to step 9.
+dispatch.
+
+8a'. **The carriage probe comes before any empty or blocked determination
+(GAL-D32).** For every unmerged branch cut by the supervisor or a decision
+session (the reference prefixes them `pm/`): if its tip is not an ancestor of
+`{{SP:1:MAIN}}` AND `git diff {{SP:1:MAIN}}...<tip> -- {{SP:8:LEDGER_PATH}}`
+adds a decision heading that `{{SP:1:MAIN}}` lacks, that branch is an
+OUTSTANDING CARRIAGE and is work in the queue. Ancestry alone is not the test;
+superseded branches are litter and stay quiet. A hit is landed, never ruled on:
+re-cut from current `{{SP:1:MAIN}}` with `git cherry-pick -x`, verify that the
+ledger now differs from `{{SP:1:MAIN}}` by exactly the original's added text, run
+the independent gate (5c to 5e) on the re-cut tip and fast-forward (6b to 6d). A
+conflict parks (GAL-D28). A carriage whose diff touches anything outside the
+ledger and the supervisor write surface is reported to the operator, not landed.
+A held idle or blocked determination from an earlier tick is re-tested by this
+probe at the start of every tick and cleared if the probe contradicts it. Only
+when the probe is empty and nothing is dispatchable, go to step 9 and write the
+determination fresh.
 
 8b. Write the next packet from `{{SP:1:LOOP_HOME}}/packet-TEMPLATE.md` into
 `{{SP:1:LOOP_HOME}}/packets/<id>.md`. Cut the branch from `{{SP:1:MAIN}}`. Create
@@ -323,7 +340,13 @@ ownership or `merge_hold` changed.
 
 9a. Write the cursor with host-clock `last_tick`, `last_tick_result`,
 `lock: null`, and fill `released_at` (host clock) on the `lock_history` entry
-written at 1c, keeping the last ten entries. Commit it on
+written at 1c, keeping the last ten entries. **If no job is in flight at this
+point, say so in every field (GAL-D34):** `job_id: null` and
+`dispatched_at: null`, the harvested id preserved as `last_job_id`, and
+`queued` and any next-action text rewritten to describe the situation you are
+leaving, not the one you found. The gatekeeper reads `queued` as your
+determination and cannot tell a stale field from a live one; a tick that parks
+on a failed gate owes this write exactly as a tick that merges does. Commit it on
 `{{SP:1:CURSOR_BRANCH}}`. This write happens **before** 9b because
 `git update-ref -d` deletes the ref's reflog with it, after which the cursor is
 the only evidence in the tree that this tick ever held the lock.
