@@ -107,8 +107,12 @@ Also collect the unnumbered values: `{{PROJECT_NAME}}`, `{{PM_IDENTITY}}`
 `{{AGENT_RULES_FILE}}` (CLAUDE.md or equivalent), `{{PROJECT_STATE_FILE}}`,
 `{{BUILD_STATE_FILE}}`, and the timing values `{{LOCK_STALE_MINUTES}}` (50),
 `{{LIVENESS_GRACE_MINUTES}}` (10), `{{WATCHDOG_STALE_HOURS}}` (3),
-`{{CLOUD_WATCHDOG_STALE_HOURS}}` (8). Defaults in parentheses are the reference
-values and are fine for a first loop.
+`{{CLOUD_WATCHDOG_STALE_HOURS}}` (8), and the two queue openings the supervisor
+writes and the gatekeeper keys on, `{{QUEUE_EMPTY_PHRASE}}` (`EMPTY`) and
+`{{QUEUE_BLOCKED_PHRASE}}` (`BLOCKED, NOT EMPTY`). Defaults in parentheses
+are the reference values and are fine for a first loop. `{{TICK_TASK_ID}}` is
+the supervisor task's scheduler id and is collected in step 4 once that task
+exists.
 
 For the status plane (GAL-D17), also collect: `{{SP:9:REGISTRY_FILE}}` (the
 project's structured registry that seeds `plan.json`, or none),
@@ -189,7 +193,8 @@ gatekeeper in front of it is a single point of failure on the component the
 whole loop depends on.
 
 1. Create the supervisor on an HOURLY schedule, not the backstop. The loop must
-   work without a gatekeeper first.
+   work without a gatekeeper first. Record its scheduler id as
+   `{{TICK_TASK_ID}}`; the gatekeeper prompt resolves it in step 3.
 2. Create the decision session, both watchdogs and the status task.
 3. Create the gatekeeper with automatic approval and no device binding, then
    verify both before its first firing: the approval from the scheduler's task
@@ -283,8 +288,9 @@ evidence you used:
   is a later, evidence-gated step and is not part of arming.
 - The gatekeeper's decision logic has been dry-run by hand against the live
   cursor and against two synthetic cursors: one whose `state` is a name the
-  schema does not list and whose `queued` opens with the blocked phrase, which
-  must skip; one with a non-null `job_id`, which must fire. The live cursor
+  schema does not list and whose `queued` opens with
+  `{{QUEUE_BLOCKED_PHRASE}}`, which must skip; one with a non-null `job_id`,
+  which must fire. The live cursor
   proves today's state; the synthetic ones prove the rule survives the next
   state name the ledger invents (GAL-D34). Record the three verdicts and the two
   fields the gatekeeper read.

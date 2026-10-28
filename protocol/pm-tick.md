@@ -36,6 +36,8 @@ defaults stated here.
 | `{{LOCK_STALE_MINUTES}}` | lock age at which a steal is permitted | `50` |
 | `{{LIVENESS_GRACE_MINUTES}}` | grace past timeout before indeterminate | `10` |
 | `{{PM_IDENTITY}}` | git author for supervisor commits | `<Project> Automation <automation@<project>.invalid>` |
+| `{{QUEUE_EMPTY_PHRASE}}` | how the first `queued` entry opens when nothing is queued; the gatekeeper keys on it | `EMPTY` |
+| `{{QUEUE_BLOCKED_PHRASE}}` | how the first `queued` entry opens when work exists but none is dispatchable; the gatekeeper keys on it | `BLOCKED, NOT EMPTY` |
 
 ## Standing rules that apply to every step
 
@@ -344,9 +346,12 @@ written at 1c, keeping the last ten entries. **If no job is in flight at this
 point, say so in every field (GAL-D34):** `job_id: null` and
 `dispatched_at: null`, the harvested id preserved as `last_job_id`, and
 `queued` and any next-action text rewritten to describe the situation you are
-leaving, not the one you found. The gatekeeper reads `queued` as your
-determination and cannot tell a stale field from a live one; a tick that parks
-on a failed gate owes this write exactly as a tick that merges does. Commit it on
+leaving, not the one you found. When nothing is dispatchable, the first
+`queued` entry opens with `{{QUEUE_EMPTY_PHRASE}}` or
+`{{QUEUE_BLOCKED_PHRASE}}` followed by the reason; the gatekeeper reads that
+opening as your determination (GAL-D34) and cannot tell a stale field from a
+live one, so a tick that parks on a failed gate owes this write exactly as a
+tick that merges does. Commit it on
 `{{SP:1:CURSOR_BRANCH}}`. This write happens **before** 9b because
 `git update-ref -d` deletes the ref's reflog with it, after which the cursor is
 the only evidence in the tree that this tick ever held the lock.

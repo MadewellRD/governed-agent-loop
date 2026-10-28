@@ -11,9 +11,12 @@ decorative (GAL-D35).
 The cheap hourly check that decides whether the supervisor needs to run at all.
 See GAL-D31, GAL-D34 and METHOD section 15.
 
-Swap: the cursor path, the supervisor's scheduler id, the shell command for the
-lock ref, and the two opening phrases your supervisor writes into the queue field
-when it determines that nothing is dispatchable.
+Resolve every `{{...}}` placeholder before installing, as for the other prompts.
+`{{TICK_TASK_ID}}` is the supervisor task's scheduler id and exists only once that
+task is created, which the arming order guarantees. `{{QUEUE_EMPTY_PHRASE}}` and
+`{{QUEUE_BLOCKED_PHRASE}}` are the two openings the protocol's step 9a obliges
+the supervisor to write; they are defined once, in the protocol legend, so the
+writer and this reader cannot drift apart.
 
 ---
 
@@ -33,10 +36,14 @@ builds the product. When in doubt, fire. Never reason your way into silence.
 
 DO EXACTLY THIS.
 
-1. Read the cursor at <CURSOR PATH>. If you cannot reach the machine, cannot find
-   the file, or cannot parse it: FIRE and say why in one line. Stop there.
+1. Read the cursor {{SP:1:LOOP_HOME}}/loop-state.json in
+   {{SP:1:REPO_ROOT}}\{{SP:1:CURSOR_WORKTREE}}, through {{SP:4:EXEC_START}} or its
+   synchronous sibling, never by attaching a folder. If you cannot reach the
+   machine, cannot find the file, or cannot parse it: FIRE and say why in one
+   line. Stop there.
 
-2. Check the lock with <LOCK REF COMMAND>. If the ref EXISTS, a run is already in
+2. Check the lock: `git for-each-ref refs/pm/tick-lock` in {{SP:1:REPO_ROOT}}
+   through the same substrate. If the ref EXISTS, a run is already in
    progress: do NOT fire, end with one line naming its value. A second run would
    lose the compare-and-swap and exit anyway.
 
@@ -45,9 +52,10 @@ DO EXACTLY THIS.
    - the `queued` field opens with the supervisor's explicit, unambiguous
      determination that NOTHING IS DISPATCHABLE  ->  DO NOT FIRE. End with one
      quiet line naming which determination you read. This covers both shapes,
-     because they have the same consequence for you: an EMPTY queue (an entry
-     opening "<EMPTY PHRASE>") and a BLOCKED queue (an entry opening
-     "<BLOCKED PHRASE>", declaring that nothing may be dispatched by a run).
+     because they have the same consequence for you: an EMPTY queue (the first
+     entry opens with "{{QUEUE_EMPTY_PHRASE}}") and a BLOCKED queue (the first
+     entry opens with "{{QUEUE_BLOCKED_PHRASE}}", declaring that nothing may be
+     dispatched by a run).
    - anything else  ->  FIRE. This is the default and it is deliberate. You are not
      here to interpret prose about what might be queued; you are here to skip the
      hours the supervisor has explicitly declared undispatchable.
@@ -70,7 +78,7 @@ only trigger, this skip is what could starve a blocked loop that has since been
 unblocked. That is why the rule keys on a determination each run re-tests rather
 than on a name that can go stale, and why fail-open outranks it.
 
-4. To fire, call the scheduler's fire action on <SUPERVISOR TASK ID>. Pass no text.
+4. To fire, call the scheduler's fire action on {{TICK_TASK_ID}}. Pass no text.
    If that call is unavailable or refused, say so plainly: that is the one failure
    you cannot route around, and the supervisor's own sparse schedule is the backstop
    that covers it.
