@@ -191,8 +191,9 @@ queue is append-only intake and closure lives only in the ledger.
 4. Create the six scheduled tasks from `prompts/`, in the order the setup skill
    gives. No trigger of the supervisor is bound to the computer (GAL-D33). The
    supervisor runs hourly until the gatekeeper has demonstrated its skip path,
-   runs with automatic approval and carries no device binding, all three read
-   back from the scheduler (GAL-D35); only then does it move to its backstop.
+   runs with automatic approval and carries no device binding, all three
+   verified against the scheduler rather than assumed (GAL-D35); only then does
+   it move to its backstop.
 5. Write your first packet from the template and let the supervisor dispatch it.
 
 Step 3 is where every first-time setup actually stalls, and `SWAP-POINTS.md` is

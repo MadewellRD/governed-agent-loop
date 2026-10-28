@@ -3,7 +3,8 @@
 The eleven rules in `README.md` were not designed. They were extracted from a week of
 running the reference implementation and writing down what broke. This file is the
 evidence. Every entry has a date, what was observed, the root cause, and the rule
-or decision it produced. Hashes are the reference repository's and are included so
+or decision it produced; LOOP-16 to LOOP-19 and DEFECT-6 carry those in prose
+rather than under labels. Hashes are the reference repository's and are included so
 the claims are checkable, not decorative.
 
 The reference implementation is SignalDesk AiTSM: a Rust workspace of about thirty

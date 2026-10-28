@@ -976,6 +976,45 @@ Reasoning:   GAL-D22's own reasoning says memory is worse than agent prose
 
 ---
 
+### GAL-D33-C1: Correction to the evidence cited by GAL-D33 and GAL-D35
+Date:        2026-10-28
+Decider:     Operator, in an attended review of the kit
+Origin:      GAL-D33's disposition says the unbound shape is available "as the
+             reference substrate is", and GAL-D35 says all three cutover
+             preconditions are "read back from the scheduler's own task
+             record". The audit behind both had read the reference scheduler's
+             approved-folders field as the device binding and concluded that
+             the reference's gatekeeper and supervisor already ran unbound.
+Question:    What does the reference actually demonstrate, and how is a device
+             binding verified?
+Options:     (a) Edit the two entries.
+             (b) Append this correction beside them, never over them.
+Disposition: (b). The entries stand as written; this records what was wrong.
+             The reference's gatekeeper, supervisor and decision session were
+             all still bound to the machine on 2026-10-28, which is exactly why
+             all three were auto-disabled with device_absent in eleven minutes.
+             Unbinding them is the standing recommendation in the reference,
+             not an accomplished fact. The one component that has demonstrated
+             the unbound shape is the hourly watch created without a device
+             requirement, which survived the window. The approved-folders field
+             in the scheduler's listing is not the binding and the listing does
+             not expose the binding at all; the only API-visible signal is the
+             "still requires that computer" line returned on a prompt update,
+             observed on the gatekeeper while its listing showed no folders.
+             GAL-D35 therefore reads: approval is read back from the task
+             record; the binding is verified by whatever signal the scheduler
+             gives, and a scheduler that gives none means the task is treated as
+             bound.
+Reasoning:   The design requirement in GAL-D33 is strengthened by the
+             correction, not weakened: three bound tasks died together and the
+             one unbound task did not. But a kit that told adopters the
+             reference already runs unbound would have cited as a proof the
+             exact thing that failed. The attended supervisor made the same
+             misreading of the folders field earlier the same day, which is why
+             the field is now named in SWAP-POINTS section 6 as the trap it is.
+
+---
+
 ## Adopting this ledger
 
 Copy this file to `docs/DECISIONS.md` in the target repository. Keep the format

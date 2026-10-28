@@ -399,7 +399,10 @@ need to be bound to it. Where the execution substrate can be reached from the
 cloud, the gatekeeper, the supervisor and the decision session run unbound and
 reach the machine through it. A run that finds the machine asleep ends in one
 line and costs nothing; a task the scheduler has disabled costs the loop until
-a human notices.
+a human notices. In the reference this is the standing recommendation and not
+yet the state: its three triggers were bound when they died, and the hourly
+watch that survived is the one component that has shown the unbound shape
+works.
 
 **Scheduler health is the one condition the repository is blind to.** A disabled
 task leaves no trace in the tree or the cursor. The reference's attended
@@ -567,7 +570,9 @@ supervisor. The supervisor should keep a sparse self-schedule underneath the
 gatekeeper, so that a gatekeeper failure degrades the loop to slow rather than to
 silent. And the supervisor leaves its hourly schedule only once the gatekeeper
 has shown its skip path, runs with automatic approval and carries no device
-binding, all three read back from the scheduler (GAL-D35): a gatekeeper that
+binding, each verified against the scheduler rather than assumed (GAL-D35), and
+the binding verified by whatever signal the scheduler gives, since a listing
+may not expose it: a gatekeeper that
 waits for a human, or that the scheduler can switch off, is a single point of
 failure in front of the component the loop depends on. The reference ran one
 without automatic approval for a day and nothing noticed, because the

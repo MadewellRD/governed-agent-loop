@@ -192,7 +192,12 @@ whole loop depends on.
    work without a gatekeeper first.
 2. Create the decision session, both watchdogs and the status task.
 3. Create the gatekeeper with automatic approval and no device binding, then
-   read both back from the scheduler's task record before its first firing.
+   verify both before its first firing: the approval from the scheduler's task
+   record, the binding by the scheduler's own signal. The listing may not
+   expose the binding at all (the reference's does not, and its approved-folders
+   field is not it; the only signal is the "still requires that computer" line
+   a prompt update returns). If the scheduler gives no signal, treat the task
+   as bound.
    The reference ran a gatekeeper for a day without automatic approval and
    nothing noticed, because the hourly supervisor hid it; a gatekeeper that
    waits for a human fires when someone is awake, which is when the loop needs
@@ -205,8 +210,8 @@ whole loop depends on.
    the queue genuinely empties or blocks, and it is the one that can stop the
    loop. A gatekeeper that has only ever said yes has not demonstrated it can
    safely say no.
-5. Only when all three GAL-D35 preconditions hold, read back from the
-   scheduler's record and not from what was asked for (skip path observed,
+5. Only when all three GAL-D35 preconditions hold, verified against the
+   scheduler and not taken from what was asked for (skip path observed,
    automatic approval on, no device binding), move the supervisor to
    `{{TICK_BACKSTOP_CRON}}`. That schedule is a floor, not a cadence: it
    guarantees that a completely dead gatekeeper degrades the loop to slow rather
@@ -239,9 +244,10 @@ task carries its model in a signed session request and cannot be patched
 through the API afterwards, so get it right at creation. If a tier is wrong
 later, the user changes it by hand in the host application.
 
-After creation, list the tasks and read back each one's cron, requires-device
-flag, model and permission mode. Report them in a table. Do not fire the
-supervisor by hand.
+After creation, list the tasks and read back each one's cron, model and
+permission mode, and confirm each one's device binding by the scheduler's own
+signal, since a listing may not expose it. Report them in a table. Do not fire
+the supervisor by hand.
 
 ## Step 5: the first packet
 
@@ -269,8 +275,10 @@ evidence you used:
 - All six tasks exist with the expected cadences, models and permission modes,
   read back from the scheduler's task records. Every task runs with automatic
   approval. No trigger of the supervisor (gatekeeper, supervisor, decision
-  session) is bound to the computer where the substrate allows it; where it does
-  not, that weakness is already written into the target's ledger.
+  session) is bound to the computer where the substrate allows it, confirmed by
+  the scheduler's own binding signal and not inferred from a listing field;
+  where the substrate does not allow it, that weakness is already written into
+  the target's ledger.
 - The supervisor is still on its hourly schedule, not the backstop. The cutover
   is a later, evidence-gated step and is not part of arming.
 - The gatekeeper's decision logic has been dry-run by hand against the live

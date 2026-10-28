@@ -23,7 +23,7 @@ Fill these in before you copy anything. Everything else derives from them.
 | 3 | Receipts directory (the binding exclusion) | `docs/gate-receipts/` |
 | 4 | Execution substrate | nMCP `execute_start` on Windows, service account `NT SERVICE\nMCP` |
 | 5 | Agent invocation and capability grant | `claude -p … --allowedTools Bash(cargo:*) …` |
-| 6 | Scheduler | Claude scheduled tasks, hourly gatekeeper, supervisor fired on demand with a sparse backstop; none of the three triggers bound to the machine |
+| 6 | Scheduler | Claude scheduled tasks, hourly gatekeeper, supervisor fired on demand with a sparse backstop; the three triggers still device-bound, with unbinding them the open recommendation after the third outage |
 | 7 | Exclusive resources the gate needs | one Postgres instance via `TEST_DATABASE_URL` |
 | 8 | Decision ledger path | `docs/DECISIONS.md`, append only, gated |
 | 9 | Registry file and status publish target | `docs/engineering-spec/tracker.json` seeds the plan of record; the page publishes as a claude.ai artifact the status task republishes |
@@ -205,10 +205,21 @@ cloud-only task kept running. The answer is not a better watchdog. No trigger of
 the supervisor is bound to the machine (GAL-D33): the gatekeeper, the supervisor
 and the decision session run unbound and reach the repository through the
 execution substrate, and a run that finds the machine asleep ends in one line.
-That needs a substrate reachable from the cloud, which the reference substrate
-is. If yours is a shell on the machine and nothing else, the binding is
-unavoidable; record it as a known weakness, keep the supervisor on its hourly
-schedule, and understand that the cloud watchdog is your only cover.
+That needs a substrate reachable from the cloud. In the reference only the
+hourly watch has demonstrated it; the gatekeeper, supervisor and decision
+session were still bound when they died together, and unbinding them is the
+standing recommendation there, not an accomplished fact. If your substrate is a
+shell on the machine and nothing else, the binding is unavoidable; record it as
+a known weakness, keep the supervisor on its hourly schedule, and understand
+that the cloud watchdog is your only cover.
+
+**The binding may not be visible.** The reference scheduler's task listing does
+not expose whether a task requires the machine. A field that looks as if it
+does (the approved-folders state) tracks something else, and the only signal
+the API returns is the "still requires that computer" line on a prompt update.
+The attended supervisor misread the folders field as the binding on the day of
+the outage. Verify the binding by whatever signal your scheduler actually
+gives; if it gives none, treat the task as bound.
 
 ---
 
