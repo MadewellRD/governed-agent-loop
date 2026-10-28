@@ -176,7 +176,7 @@ queue is append-only intake and closure lives only in the ledger.
 | `protocol/status-snapshot.schema.json` | The snapshot contract the page renders and the validator enforces. |
 | `status/build-status.template.html` | The build-status page: fixed renderer over the snapshot, investor first. The status task republishes it with a new snapshot beside it; it never writes HTML. |
 | `prompts/status.prompt.md` | The status task: republishes the build-status page from a fresh validated snapshot. |
-| `prompts/gatekeeper.prompt.md` | The hourly cheap check: reads the cursor and the lock, fires the supervisor when there is work, fails open. |
+| `prompts/gatekeeper.prompt.md` | The hourly cheap check: reads the cursor and the lock, skips only on the supervisor's own determination that nothing is dispatchable, never on a state name, fails open. |
 | `skill/governed-agent-loop-setup/SKILL.md` | The setup skill: asks the ten swap-point questions, parameterizes this kit into a target repo, runs setup-loop, creates the six scheduled tasks, verifies. |
 
 ---
@@ -189,8 +189,10 @@ queue is append-only intake and closure lives only in the ledger.
    bind the credential, set the execution profile, verify the gate can run
    unattended.
 4. Create the six scheduled tasks from `prompts/`, in the order the setup skill
-   gives. The supervisor runs hourly until the gatekeeper has demonstrated both
-   its fire path and its skip path; only then does it move to its backstop.
+   gives. No trigger of the supervisor is bound to the computer (GAL-D33). The
+   supervisor runs hourly until the gatekeeper has demonstrated its skip path,
+   runs with automatic approval and carries no device binding, all three read
+   back from the scheduler (GAL-D35); only then does it move to its backstop.
 5. Write your first packet from the template and let the supervisor dispatch it.
 
 Step 3 is where every first-time setup actually stalls, and `SWAP-POINTS.md` is
